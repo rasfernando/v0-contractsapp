@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, HelpCircle, Flag, Grid3X3 } from 'lucide-react';
+import { Search, HelpCircle, Flag, Grid3X3, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -439,13 +439,13 @@ export default function DashboardPage() {
             </div>
 
             <Card className="bg-white border border-border">
-              <div className="px-5 pt-5 pb-3 border-b border-border">
+              <div className="px-5 pt-5 pb-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Records</p>
               </div>
 
-              <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-border">
-                {/* Search */}
-                <div className="relative flex-1 max-w-xs">
+              {/* Search */}
+              <div className="px-5 pb-3">
+                <div className="relative max-w-xs">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="text"
@@ -453,57 +453,99 @@ export default function DashboardPage() {
                     className="w-full pl-8 pr-3 py-1.5 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#4a90d9]"
                   />
                 </div>
-                {/* Filters */}
-                <div className="flex items-center gap-1">
-                  {['Current', 'Conclude', 'View only'].map((f, i) => (
-                    <button
-                      key={f}
-                      className={`px-3 py-1 text-xs rounded border transition-colors ${
-                        i === 0
-                          ? 'bg-[#3d4eaa] text-white border-[#3d4eaa]'
-                          : 'bg-white text-muted-foreground border-border hover:border-gray-400'
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
+              </div>
+
+              {/* Tab Filters */}
+              <div className="px-5 flex items-center gap-6 border-b border-border">
+                {['Current', 'Complete', 'View only'].map((f, i) => (
+                  <button
+                    key={f}
+                    className={`pb-2.5 text-sm transition-colors ${
+                      i === 0
+                        ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
               </div>
 
               {/* Table */}
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-gray-50">
-                    <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Engagement Name</th>
-                    <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Reference</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { name: 'T&T TR6638 Turner and Country Documentation', ref: '17365961' },
-                    { name: 'Grey Mcguire Corp Confidentiality Agreement', ref: '17365962' },
-                    { name: 'Innovation and Administration Centres of Delivery', ref: '17432945' },
-                    { name: 'Google Along C3 Drive Case Management Services', ref: '17519783' },
-                    { name: 'Airport Management Services', ref: '17365963' },
-                    { name: 'T&T TR6638 Turner and Country Documentation', ref: '17365964' },
-                    { name: 'DPG Williams Corp Confidentiality Agreement', ref: '17415822' },
-                    { name: 'Renovation and Administration Services at Gateway', ref: '17415823' },
-                    { name: 'Google Along C3 Drive Case Management Services', ref: '32361489' },
-                    { name: 'Project Management Services', ref: '17365965' },
-                  ].map((row, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => router.push('/opportunity')}
-                    >
-                      <td className="px-5 py-3">
-                        <span className="text-[#4a90d9] hover:underline font-medium">{row.name}</span>
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground">{row.ref}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Engagement Name</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Reference</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Manager</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Client</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pre-Engagement Status</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: 'TD TR5938 Town and Country Decommission', ref: '123456ENG', manager: 'David Smith', client: 'TD Bank Group' },
+                      { name: 'EMD Millipore Corp - Confidentiality Agreement', ref: '193475ENG', manager: 'Susan Davies', client: 'Exelead a Merck Millipore Sigma Company' },
+                      { name: 'Renovation And Rehabilitation Services Of Embassy', ref: '173432ENG', manager: 'Kalp Patel', client: 'The Embassy of the State of Kuwait' },
+                      { name: 'Google Vizag E3 Sites Cost Management Services', ref: '323414ENG', manager: 'Jennifer Budge', client: 'Google India Private Limited' },
+                      { name: 'Project Management Services', ref: '223474ENG', manager: 'John Pilkington', client: 'CBRE GWS France SAS' },
+                      { name: 'TD TR5938 Town and Country Decommission', ref: '123456ENG', manager: 'David Smith', client: 'TD Bank Group' },
+                      { name: 'EMD Millipore Corp - Confidentiality Agreement', ref: '193475ENG', manager: 'Susan Davies', client: 'Exelead a Merck Millipore Sigma Company' },
+                      { name: 'Renovation And Rehabilitation Services Of Embassy', ref: '173432ENG', manager: 'Kalp Patel', client: 'The Embassy of the State of Kuwait' },
+                      { name: 'Google Vizag E3 Sites Cost Management Services', ref: '323414ENG', manager: 'Jennifer Budge', client: 'Google India Private Limited' },
+                      { name: 'Project Management Services', ref: '223474ENG', manager: 'John Pilkington', client: 'CBRE GWS France SAS' },
+                    ].map((row, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => router.push('/opportunity')}
+                      >
+                        <td className="px-5 py-3">
+                          <span className="text-[#4a90d9] hover:underline font-medium">{row.name}</span>
+                        </td>
+                        <td className="px-5 py-3 text-muted-foreground">{row.ref}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                              <Users size={14} className="text-gray-500" />
+                            </div>
+                            <div>
+                              <div className="text-[#4a90d9] font-medium text-sm">{row.manager}</div>
+                              <div className="text-xs text-muted-foreground">Associate Director</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-foreground">{row.client}</td>
+                        <td className="px-5 py-3">
+                          <span className="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-700 uppercase">Confirmed</span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="px-2 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-700 uppercase">Reviewed</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-5 py-3 flex items-center justify-end gap-4 border-t border-border text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span>Items per page:</span>
+                  <select className="border border-border rounded px-2 py-1 bg-white text-sm">
+                    <option>10</option>
+                    <option>25</option>
+                    <option>50</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Page 1 of 1</span>
+                  <button className="p-1 border border-border rounded hover:bg-gray-50 disabled:opacity-50" disabled>&lt;</button>
+                  <button className="p-1 border border-border rounded hover:bg-gray-50 disabled:opacity-50" disabled>&gt;</button>
+                </div>
+              </div>
             </Card>
           </div>
         )}
