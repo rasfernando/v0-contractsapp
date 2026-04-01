@@ -1,11 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Settings, HelpCircle, Bell, Flag, ExternalLink } from 'lucide-react';
+import { Search, HelpCircle, Flag, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Mock data for tasks
 const TASKS = [
@@ -14,9 +29,9 @@ const TASKS = [
     name: '[Task name]',
     activity: '[Activity name]',
     workItem: '[Work item name]',
-    client: '[Global case studies]',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Overdue 1 month',
+    client: '[Upload case studies]',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Overdue: 1 month',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'high',
@@ -26,9 +41,9 @@ const TASKS = [
     name: '[Task name]',
     activity: '[Activity name]',
     workItem: '[Work item name]',
-    client: '[Global]',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Overdue 1 week',
+    client: '',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Overdue: 1 week',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'high',
@@ -38,9 +53,9 @@ const TASKS = [
     name: '[Task name]',
     activity: '[Activity name]',
     workItem: '[Work item name]',
-    client: '[Submissions delivered]',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Overdue 2 days',
+    client: '[Submit deliverables]',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Overdue: 2 days',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'high',
@@ -51,8 +66,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due today',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: today',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'medium',
@@ -63,8 +78,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '[Upload case studies]',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due 1 week',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: two days',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'medium',
@@ -75,8 +90,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due 2 weeks',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: 1 week',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'low',
@@ -87,8 +102,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '[Upload case studies]',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due 2 weeks',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: 2 weeks',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'low',
@@ -99,8 +114,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due 3 weeks',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: 3 weeks',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'low',
@@ -111,8 +126,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due 1 month',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: 1 month',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'low',
@@ -123,8 +138,8 @@ const TASKS = [
     activity: '[Activity name]',
     workItem: '[Work item name]',
     client: '',
-    dueDate: '(DD/MM/YYYY)',
-    relativeDate: 'Due 2 months',
+    dueDate: '[DD/MM/YYYY]',
+    relativeDate: 'Due: 2 months',
     status: '[Commission name]',
     workspaceLink: 'View Workspace',
     priority: 'low',
@@ -135,6 +150,19 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'tasks' | 'engagements'>('tasks');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('due-overdue');
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+
+  // Form state for Create Opportunity
+  const [opportunityName, setOpportunityName] = useState('');
+  const [country, setCountry] = useState('');
+  const [costCentre, setCostCentre] = useState('');
+  const [organisationLocation, setOrganisationLocation] = useState('');
+  const [client, setClient] = useState('');
+  const [opportunityDirector, setOpportunityDirector] = useState('');
+  const [opportunityManager, setOpportunityManager] = useState('');
+
+  const isFormValid =
+    opportunityName && country && costCentre && organisationLocation && client && opportunityDirector && opportunityManager;
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -143,63 +171,84 @@ export default function DashboardPage() {
       case 'medium':
         return 'text-amber-600';
       case 'low':
-        return 'text-neutral-600';
+        return 'text-muted-foreground';
       default:
-        return 'text-neutral-600';
+        return 'text-muted-foreground';
     }
   };
 
-  const getPriorityBgColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-50';
-      case 'medium':
-        return 'bg-amber-50';
-      case 'low':
-        return 'bg-neutral-50';
-      default:
-        return 'bg-neutral-50';
-    }
+  const resetForm = () => {
+    setOpportunityName('');
+    setCountry('');
+    setCostCentre('');
+    setOrganisationLocation('');
+    setClient('');
+    setOpportunityDirector('');
+    setOpportunityManager('');
+  };
+
+  const handleCreateRecord = () => {
+    // Handle form submission
+    console.log('Creating record:', {
+      opportunityName,
+      country,
+      costCentre,
+      organisationLocation,
+      client,
+      opportunityDirector,
+      opportunityManager,
+    });
+    resetForm();
+    setIsCreateSheetOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-[#2d3561] to-[#3d4edf] text-white">
-        <div className="px-8 py-6">
+      <header className="bg-gradient-to-r from-[#1e2a5e] to-[#3d4eaa] text-white">
+        <div className="px-4 py-3">
           {/* Top nav */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center">
-                <span className="text-xs font-bold">H</span>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <button className="p-1.5 hover:bg-white/10 rounded transition-colors">
+                <Grid3X3 size={18} />
+              </button>
+              <Search size={18} className="text-white/70" />
+              <div className="flex items-center gap-1.5 ml-2">
+                <div className="w-5 h-5 rounded bg-amber-400 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-amber-900">H</span>
+                </div>
+                <span className="text-sm font-semibold tracking-wide">HIVE</span>
               </div>
-              <span className="text-sm font-medium">HIVE</span>
-              <span className="text-xs text-white/60 ml-2">Contracts App</span>
+              <span className="text-sm text-white/70 ml-2">Contracts App</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm">Hi [User first name]</span>
-              <button className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                <span className="text-xs">👤</span>
+              <button className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+                <span className="text-xs font-medium">U</span>
               </button>
-              <button className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+              <div className="flex items-center gap-1.5 text-sm">
                 <HelpCircle size={16} />
-              </button>
-              <span className="text-sm">Support</span>
+                <span>Support</span>
+              </div>
             </div>
           </div>
 
           {/* Title section */}
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between pb-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Contracts app</h1>
-              <p className="text-white/80 text-sm">
-                Use the Contract Application to find / No Bid decisions and manage
+              <h1 className="text-2xl font-semibold mb-1">Contracts app</h1>
+              <p className="text-white/70 text-sm leading-relaxed">
+                Use the Contract Application to run Bid / No Bid decisions and manage
                 <br />
                 your contracts through to approval.
               </p>
             </div>
-            <Button className="bg-[#4f9ef9] hover:bg-[#3a8aff] text-white font-medium">
-              Create new RM record
+            <Button
+              onClick={() => setIsCreateSheetOpen(true)}
+              className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium rounded-full px-5"
+            >
+              Create new Opportunity record
             </Button>
           </div>
         </div>
@@ -207,12 +256,12 @@ export default function DashboardPage() {
 
       {/* Tabs */}
       <div className="border-b border-border bg-white">
-        <div className="px-8 flex gap-8">
+        <div className="px-4 flex gap-6">
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`py-4 px-1 font-medium text-sm border-b-2 transition-colors ${
+            className={`py-3 px-1 text-sm border-b-2 transition-colors ${
               activeTab === 'tasks'
-                ? 'border-primary text-primary'
+                ? 'border-[#3d4eaa] text-[#3d4eaa] font-medium'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -220,9 +269,9 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={() => setActiveTab('engagements')}
-            className={`py-4 px-1 font-medium text-sm border-b-2 transition-colors ${
+            className={`py-3 px-1 text-sm border-b-2 transition-colors ${
               activeTab === 'engagements'
-                ? 'border-primary text-primary'
+                ? 'border-[#3d4eaa] text-[#3d4eaa] font-medium'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -232,60 +281,60 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content */}
-      <div className="px-8 py-8">
+      <div className="flex-1 px-4 py-6">
         {activeTab === 'tasks' && (
           <div className="space-y-6">
             {/* Section Title */}
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Tasks assigned to you</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-1">Tasks assigned to you</h2>
               <p className="text-sm text-muted-foreground">
                 All tasks assigned to you across all of your workspaces are listed below
               </p>
             </div>
 
             {/* Task Registry */}
-            <Card className="border border-border bg-white">
-              <div className="p-6 border-b border-border">
-                <h3 className="text-xs font-semibold text-foreground tracking-wider">
-                  TASK REGISTRY
+            <Card className="border border-border bg-white shadow-sm">
+              <div className="px-4 py-3 border-b border-border">
+                <h3 className="text-xs font-semibold text-foreground tracking-wider uppercase">
+                  Task Registry
                 </h3>
               </div>
 
               {/* Filters */}
-              <div className="p-6 border-b border-border space-y-4">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search"
-                    className="pl-9 bg-white border-border"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-
-                {/* Status Filter */}
-                <div className="flex gap-2">
+              <div className="px-4 py-3 border-b border-border">
+                {/* Status Filter Tabs */}
+                <div className="flex gap-4 mb-3">
                   <button
                     onClick={() => setFilterStatus('due-overdue')}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
+                    className={`text-sm pb-1 border-b-2 transition-colors ${
                       filterStatus === 'due-overdue'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted text-foreground hover:bg-secondary'
+                        ? 'border-[#3d4eaa] text-[#3d4eaa] font-medium'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     Due and overdue (20)
                   </button>
                   <button
                     onClick={() => setFilterStatus('completed')}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
+                    className={`text-sm pb-1 border-b-2 transition-colors ${
                       filterStatus === 'completed'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted text-foreground hover:bg-secondary'
+                        ? 'border-[#3d4eaa] text-[#3d4eaa] font-medium'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     Completed tasks (2)
                   </button>
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search"
+                    className="pl-9 bg-white border-border h-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -293,20 +342,20 @@ export default function DashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-foreground">
+                    <tr className="border-b border-border">
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
                         Task
                       </th>
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-foreground">
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
                         Client/Contract
                       </th>
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-foreground">
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
                         Due Date
                       </th>
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-foreground">
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
                         Status
                       </th>
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-foreground">
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
                         Flag
                       </th>
                     </tr>
@@ -315,39 +364,37 @@ export default function DashboardPage() {
                     {TASKS.map((task) => (
                       <tr
                         key={task.id}
-                        className={`border-b border-border hover:bg-muted/50 transition-colors ${getPriorityBgColor(
-                          task.priority
-                        )}`}
+                        className="border-b border-border hover:bg-muted/30 transition-colors"
                       >
-                        <td className="px-6 py-4 text-sm">
-                          <div className="space-y-1">
-                            <div className="font-medium text-primary">{task.name}</div>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="space-y-0.5">
+                            <div className="font-medium text-[#3d4eaa]">{task.name}</div>
                             <div className="text-xs text-muted-foreground">{task.activity}</div>
                             <div className="text-xs text-muted-foreground">{task.workItem}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm">
-                          <div className="text-primary hover:underline cursor-pointer">
-                            {task.client}
-                          </div>
+                        <td className="px-4 py-3 text-sm">
+                          {task.client && (
+                            <span className="text-[#3d4eaa] hover:underline cursor-pointer">
+                              {task.client}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-6 py-4 text-sm">
-                          <div className="font-medium text-foreground">{task.dueDate}</div>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="text-muted-foreground">{task.dueDate}</div>
                           <div className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>
                             {task.relativeDate}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm">
-                          <div className="text-primary hover:underline cursor-pointer">
-                            {task.status}
-                          </div>
-                          <div className="text-xs text-primary hover:underline cursor-pointer">
-                            View Workspace
-                          </div>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="text-muted-foreground">{task.status}</div>
+                          <span className="text-xs text-[#3d4eaa] hover:underline cursor-pointer">
+                            {task.workspaceLink}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-4 py-3">
                           <button className="text-muted-foreground hover:text-foreground transition-colors">
-                            <Flag size={18} className="w-4 h-4" />
+                            <Flag size={16} />
                           </button>
                         </td>
                       </tr>
@@ -357,16 +404,24 @@ export default function DashboardPage() {
               </div>
 
               {/* Pagination */}
-              <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-muted/30 text-xs text-muted-foreground">
-                <div>Items per page: 10</div>
+              <div className="px-4 py-3 border-t border-border flex items-center justify-end gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <span>Page (3 of 4)</span>
-                  <button className="px-2 py-1 hover:bg-muted rounded transition-colors">
-                    ←
-                  </button>
-                  <button className="px-2 py-1 hover:bg-muted rounded transition-colors">
-                    →
-                  </button>
+                  <span>Items per page:</span>
+                  <Select defaultValue="10">
+                    <SelectTrigger className="w-16 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span>Page [#] of [#]</span>
+                <div className="flex gap-1">
+                  <button className="p-1.5 hover:bg-muted rounded transition-colors">&lt;</button>
+                  <button className="p-1.5 hover:bg-muted rounded transition-colors">&gt;</button>
                 </div>
               </div>
             </Card>
@@ -376,7 +431,7 @@ export default function DashboardPage() {
         {activeTab === 'engagements' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Engagement records</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-1">Engagement records</h2>
               <p className="text-sm text-muted-foreground">Your active engagements</p>
             </div>
             <Card className="p-8 text-center text-muted-foreground">
@@ -387,24 +442,178 @@ export default function DashboardPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-[#2d3561] text-white mt-12">
-        <div className="px-8 py-6 text-xs text-white/60 space-y-2">
-          <div className="flex gap-4">
-            <a href="#" className="hover:text-white transition-colors">
-              TERMS & CONDITIONS
+      <footer className="border-t border-border bg-[#1e2a5e] text-white mt-auto">
+        <div className="px-4 py-4 text-xs text-white/60 space-y-1">
+          <div className="flex gap-3">
+            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
+              Terms & Conditions
             </a>
             <span>|</span>
-            <a href="#" className="hover:text-white transition-colors">
-              PRIVACY POLICY
+            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
+              Privacy Policy
             </a>
             <span>|</span>
-            <a href="#" className="hover:text-white transition-colors">
-              COOKIES POLICY
+            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
+              Cookies Policy
             </a>
           </div>
-          <div>All rights reserved. Turner & Townsend © 2025</div>
+          <div className="text-[10px]">All rights reserved. Turner & Townsend © 2025</div>
         </div>
       </footer>
+
+      {/* Create Opportunity Sheet */}
+      <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle className="text-xl font-semibold">Create Opportunity record</SheetTitle>
+            <SheetDescription className="text-sm text-muted-foreground leading-relaxed">
+              Use this form to set up a new opportunity record for your engagement. Enter the client
+              location, country and cost centre then search and add the director and opportunity
+              manager.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6 px-4 pb-4">
+            {/* Opportunity Name */}
+            <div className="space-y-2">
+              <Label htmlFor="opportunityName">Opportunity name*</Label>
+              <Input
+                id="opportunityName"
+                value={opportunityName}
+                onChange={(e) => setOpportunityName(e.target.value)}
+                placeholder=""
+                className="bg-white"
+              />
+              <p className="text-xs text-muted-foreground">
+                Must be a unique name and not previously used on other engagements
+              </p>
+            </div>
+
+            {/* Country */}
+            <div className="space-y-2">
+              <Label>Country*</Label>
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="uk">United Kingdom</SelectItem>
+                  <SelectItem value="us">United States</SelectItem>
+                  <SelectItem value="au">Australia</SelectItem>
+                  <SelectItem value="de">Germany</SelectItem>
+                  <SelectItem value="fr">France</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Cost Centre */}
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cost centre*"
+                  value={costCentre}
+                  onChange={(e) => setCostCentre(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* CLIENT Section */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Client
+              </h4>
+
+              {/* Organisation Location */}
+              <div className="space-y-2">
+                <Label htmlFor="organisationLocation">Organisation location*</Label>
+                <Input
+                  id="organisationLocation"
+                  value={organisationLocation}
+                  onChange={(e) => setOrganisationLocation(e.target.value)}
+                  placeholder=""
+                  className="bg-white"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Select the location of the organisation
+                </p>
+              </div>
+
+              {/* Client Search */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Client*"
+                    value={client}
+                    onChange={(e) => setClient(e.target.value)}
+                    className="pl-9 bg-white"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You can search for organisations registered to the selected country by their legal
+                  name or ID
+                </p>
+              </div>
+            </div>
+
+            {/* OPPORTUNITY DIRECTOR Section */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Opportunity Director
+              </h4>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search individuals*"
+                  value={opportunityDirector}
+                  onChange={(e) => setOpportunityDirector(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* OPPORTUNITY MANAGER Section */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Opportunity Manager
+              </h4>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search individuals*"
+                  value={opportunityManager}
+                  onChange={(e) => setOpportunityManager(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <SheetFooter className="border-t border-border pt-4">
+            <div className="flex gap-3 w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  resetForm();
+                  setIsCreateSheetOpen(false);
+                }}
+                className="flex-1 border-[#3d4eaa] text-[#3d4eaa] hover:bg-[#3d4eaa]/10"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateRecord}
+                disabled={!isFormValid}
+                className="flex-1 bg-[#3d4eaa] hover:bg-[#2d3e9a] text-white disabled:opacity-50"
+              >
+                Create record
+              </Button>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
