@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HelpCircle, Grid3X3, ExternalLink, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,7 +29,7 @@ export default function OpportunityPage() {
   const [showSuccess, setShowSuccess] = useState(true);
 
   // Hide success message after 5 seconds
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => setShowSuccess(false), 5000);
     return () => clearTimeout(timer);
   }, []);
