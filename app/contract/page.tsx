@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink, ChevronDown, ChevronUp, Flag, ZoomIn, ZoomOut, FileText, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 const PIPELINE_STAGES = [
-  { id: 'prep',       label: 'Contract Preparation', done: true  },
+  { id: 'prep',       label: 'Contract',              done: true  },
   { id: 'rm_review',  label: 'RM Review',             done: false, active: true },
   { id: 'negotiation',label: 'Negotiation',           done: false },
   { id: 'approval',   label: 'Approval',              done: false },
   { id: 'signing',    label: 'Contract Signing',      done: false },
-  { id: 'key_deal',   label: 'Key Deal Summary Preparation', done: false },
-  { id: 'commission', label: 'Commission Setup',      done: false },
+  { id: 'key_deal',   label: 'Key Deal Summary',      done: false },
+  { id: 'commission', label: 'Commission',            done: false },
   { id: 'complete',   label: 'Complete',              done: false },
 ];
 
@@ -31,10 +31,502 @@ const CONTRACT_INFO_ROWS = [
   { label: 'OUR SIGNING DATE',               value: '–' },
 ];
 
+const FLAGGED_CLAUSES = [
+  {
+    id: 1,
+    title: 'Professional indemnity insurance / potential unlimited liability',
+    risk: 'VERY HIGH',
+    riskColor: 'bg-red-500',
+    clauseType: 'Insurance',
+    flaggedClause: '"When reasonably requested by us you are to provide documentary evidence that the insurance required under this Appointment is being maintained."',
+    amendments: 'Clauses requiring you to maintain PI insurance and prove it — where the same area of the contract doesn\'t clearly cap your overall liability. It\'s flagging possible exposure above your insurance limits.',
+  },
+  {
+    id: 2,
+    title: 'Sub-consultant payment terms',
+    risk: 'UNACCEPTABLE',
+    riskColor: 'bg-gray-700',
+    clauseType: 'Payment Terms',
+    flaggedClause: 'Payment terms for sub-consultants extend beyond 60 days.',
+    amendments: 'Standard payment terms should not exceed 30 days for sub-consultants.',
+  },
+  {
+    id: 3,
+    title: 'Liability cap above standard level',
+    risk: 'HIGH',
+    riskColor: 'bg-amber-500',
+    clauseType: 'Liability / Limitation of liability',
+    flaggedClause: '"The Consultant\'s aggregate liability to the Client arising out of or in connection with this Agreement shall be limited to an amount equal to 200% of the Fees or £10,000,000, whichever is greater, and shall apply regardless of the cause of action."',
+    amendments: 'The Consultant\'s total aggregate liability to the Client arising out of or in connection with this Agreement, whether in contract, tort (including negligence), breach of statutory duty or otherwise, shall be limited to £5,000,000 (five million pounds). This cap applies to all claims in aggregate and excludes liability for death or personal injury caused by the Consultant\'s negligence and any other liability which cannot lawfully be excluded.',
+    mitigation: 'We have agreed a higher PI cap of £10m (standard £5m) but confirmed with Insurance that cover is available on existing terms. The higher cap is limited to this project only and excludes consequential loss and indirect damages. Fee levels have been uplifted to reflect the additional exposure, and this position will be reviewed at each annual renewal.',
+  },
+  {
+    id: 4,
+    title: 'Indemnity wording broader than template',
+    risk: 'MEDIUM',
+    riskColor: 'bg-gray-400',
+    clauseType: 'Indemnity',
+    flaggedClause: 'Indemnity clause extends beyond standard template wording.',
+    amendments: 'Review and narrow the indemnity scope to match template.',
+  },
+  {
+    id: 5,
+    title: 'Extended limitation period (beyond 6 years)',
+    risk: 'MEDIUM',
+    riskColor: 'bg-gray-400',
+    clauseType: 'Limitation period / Time bar',
+    flaggedClause: 'Limitation period extends to 12 years.',
+    amendments: 'Standard limitation period is 6 years.',
+  },
+  {
+    id: 6,
+    title: 'Unfavourable payment terms (long payment period / pay-when-paid)',
+    risk: 'LOW',
+    riskColor: 'bg-green-500',
+    clauseType: 'Payment Terms / Commercial',
+    flaggedClause: 'Payment terms extend to 90 days.',
+    amendments: 'Standard payment terms are 30 days.',
+  },
+];
+
+const DOCUMENT_PARAGRAPHS = [
+  { num: '4.2', text: 'A payment application in respect of an instalment may not be given until after the end of the relevant period.' },
+  { num: '5', title: 'Payment notices', text: 'In relation to each instalment, the payer (or specified person, if any) must give a notice (payment notice) to the payee not later than five days after the payment due date, specifying:' },
+  { num: '', sub: '(a)', text: 'the sum that, in the opinion of the payer (or specified person), is (or was) due at the payment due date; and' },
+  { num: '', sub: '(b)', text: 'the basis on which that sum is calculated,' },
+  { num: '', text: 'it being immaterial that such sum may be zero.' },
+  { num: '6', title: 'Payments', text: 'Subject to paragraphs 7.4 and 8, the payer must pay the payee the notified sum (to the extent not already paid) no later than the final date for payment of that sum.' },
+  { num: '7', title: 'Payment reduction notice' },
+  { num: '7.1', text: 'The payer (or specified person, if any) may give the payee notice of the payer\'s intention to pay less than the notified sum (payment reduction notice) and such notice must specify:', highlighted: true },
+  { num: '', sub: '(a)', text: 'the sum (adjusted sum) the payer considers to be due on the date the payment reduction notice is served; and' },
+  { num: '', sub: '(b)', text: 'the basis on which that sum is calculated.' },
+  { num: '7.2', text: 'A payment reduction notice may not be given:' },
+  { num: '', sub: '(a)', text: 'before the notice by reference to which the notified sum is determined; nor' },
+  { num: '', sub: '(b)', text: 'any later than five days before the final date for payment.' },
+  { num: '7.3', text: 'It is immaterial that the sum referred to in paragraph 7.1 may be zero.' },
+  { num: '7.4', text: 'If the payer (or a specified person) serves a payment reduction notice in accordance with this paragraph 7, the amount the payer must pay under paragraph 6 is the adjusted sum.' },
+  { num: '8', title: 'Insolvency' },
+  { num: '8.1', text: 'Paragraph 8.2 applies if:' },
+  { num: '', sub: '(a)', text: 'the payee is or becomes insolvent; and' },
+];
+
 export default function ContractPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('Overview');
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [expandedClause, setExpandedClause] = useState<number | null>(1);
+  const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
+  const [reviewComplete, setReviewComplete] = useState(false);
 
+  const handleStartReview = () => {
+    setIsReviewing(true);
+    setActiveTab('Review');
+  };
+
+  const handleMarkAsReviewed = () => {
+    setReviewComplete(true);
+    setIsReviewing(false);
+  };
+
+  const handleReviewComplete = () => {
+    // Move to next stage
+    setActiveTab('Overview');
+    setReviewComplete(false);
+  };
+
+  // Document Review View
+  if (isReviewing && activeTab === 'Review') {
+    return (
+      <div className="min-h-screen flex flex-col bg-background font-sans">
+        {/* Header */}
+        <header className="bg-[#1e2a5e] text-white">
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <button className="p-1.5 hover:bg-white/10 rounded"><Grid3X3 size={18} /></button>
+              <button className="p-1.5 hover:bg-white/10 rounded">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </button>
+              <div className="flex items-center gap-1.5">
+                <div className="w-7 h-7 rounded-full bg-blue-400 flex items-center justify-center"><span className="text-xs font-bold">H</span></div>
+                <span className="text-sm font-semibold tracking-widest">HIVE</span>
+              </div>
+              <span className="text-white/50 text-sm">Contracts App</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-white/80">Hi [User first name]</span>
+              <button className="p-1.5 hover:bg-white/10 rounded">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </button>
+              <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
+              <span className="text-sm">Support</span>
+            </div>
+          </div>
+          <div className="bg-[#1e2a5e] border-t border-white/10 px-4 py-2 flex items-center gap-3">
+            <button onClick={() => setIsReviewing(false)} className="hover:bg-white/10 rounded p-1"><ArrowLeft size={16} /></button>
+            <div>
+              <div className="text-sm font-semibold">1 LONDON STREET – 1823456</div>
+              <div className="text-xs text-white/60">CONTRACT: MSA 12345678</div>
+            </div>
+          </div>
+          <div className="flex gap-0 border-t border-white/10 px-4">
+            {CONTRACT_TABS.map(tab => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); if (tab !== 'Review') setIsReviewing(false); }}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === tab ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white/90'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Main content - Document Review */}
+        <main className="flex-1 flex">
+          {/* Page sidebar */}
+          <div className="w-14 bg-gray-100 border-r border-border flex flex-col items-center py-4 gap-2">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Page</div>
+            <button className="w-8 h-8 rounded border border-border bg-white text-xs font-medium hover:bg-gray-50">1</button>
+            <button className="w-8 h-8 rounded border border-border bg-white text-xs font-medium hover:bg-gray-50">8</button>
+            <div className="flex-1" />
+            <button className="p-1.5 hover:bg-gray-200 rounded"><ChevronUp size={16} className="text-muted-foreground" /></button>
+            <button className="p-1.5 hover:bg-gray-200 rounded"><ChevronDown size={16} className="text-muted-foreground" /></button>
+            <button className="p-1.5 hover:bg-gray-200 rounded"><FileText size={16} className="text-muted-foreground" /></button>
+            <button className="p-1.5 hover:bg-gray-200 rounded"><ZoomIn size={16} className="text-muted-foreground" /></button>
+            <button className="p-1.5 hover:bg-gray-200 rounded"><ZoomOut size={16} className="text-muted-foreground" /></button>
+          </div>
+
+          {/* Document view */}
+          <div className="flex-1 overflow-auto p-6 bg-gray-50">
+            <div className="max-w-3xl mx-auto bg-white shadow-sm border border-border rounded p-8">
+              <div className="text-center text-xs text-muted-foreground mb-6">Confidential – External</div>
+              <div className="space-y-4 text-sm leading-relaxed">
+                {DOCUMENT_PARAGRAPHS.map((para, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-10 flex-shrink-0 text-right">
+                      {para.num && <span className="font-semibold">{para.num}</span>}
+                      {para.sub && <span className="text-muted-foreground ml-4">{para.sub}</span>}
+                    </div>
+                    <div className="flex-1">
+                      {para.title && <div className="font-semibold mb-1">{para.title}</div>}
+                      {para.text && (
+                        <div className="flex items-start gap-2">
+                          <span className={para.highlighted ? 'bg-blue-100 px-1 -mx-1' : ''}>
+                            {para.text}
+                          </span>
+                          {para.highlighted && (
+                            <button className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1e2a5e] flex items-center justify-center">
+                              <Flag size={12} className="text-white" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center mt-10 pt-4 border-t border-border text-xs text-muted-foreground">
+                <span>August 2021</span>
+                <span>making the <span className="text-[#4a90d9]">difference</span></span>
+                <span>11</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right panel - Contract Review */}
+          <div className="w-80 bg-white border-l border-border flex flex-col">
+            <div className="p-5 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground mb-2">Contract review</h2>
+              <p className="text-sm text-muted-foreground">Review the contract, add additional guardrails or edit the guardrails that have been added in the AI review.</p>
+            </div>
+
+            <div className="p-5 border-b border-border">
+              <button className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide flex items-center gap-1">
+                + Add Guardrail
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {FLAGGED_CLAUSES.slice(0, 3).map(clause => (
+                <div key={clause.id} className="border-b border-border">
+                  <button
+                    onClick={() => setExpandedClause(expandedClause === clause.id ? null : clause.id)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      {expandedClause === clause.id ? <ChevronDown size={16} /> : <ChevronUp size={16} className="rotate-180" />}
+                      <span className="text-sm font-medium text-foreground">{clause.title}</span>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-semibold text-white ${clause.riskColor}`}>
+                      {clause.risk}
+                    </span>
+                  </button>
+                  {expandedClause === clause.id && (
+                    <div className="px-4 pb-4 space-y-3">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Clause Type</div>
+                        <div className="text-sm text-foreground">{clause.clauseType}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Flagged Clause</div>
+                        <div className="text-sm text-muted-foreground italic">{clause.flaggedClause}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Amendments</div>
+                        <div className="text-sm text-muted-foreground">{clause.amendments}</div>
+                      </div>
+                      <div className="flex items-center gap-4 pt-2">
+                        <button className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide">Edit</button>
+                        <button className="text-xs font-semibold text-red-500 uppercase tracking-wide">Delete</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-border">
+              <Button onClick={handleMarkAsReviewed} className="w-full bg-[#1e2a5e] hover:bg-[#2a3a6e] text-white">
+                Mark as reviewed
+              </Button>
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-border bg-[#1e2a5e] text-white">
+          <div className="px-4 py-4 text-xs text-white/60 space-y-1">
+            <div className="flex gap-3">
+              <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Terms &amp; Conditions</a>
+              <span>|</span>
+              <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Privacy Policy</a>
+              <span>|</span>
+              <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Cookies Policy</a>
+            </div>
+            <div className="text-[10px]">Terms and Conditions</div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Review Summary View (after Mark as Reviewed)
+  if (reviewComplete && activeTab === 'Review') {
+    return (
+      <div className="min-h-screen flex flex-col bg-background font-sans">
+        {/* Header - same as above */}
+        <header className="bg-[#1e2a5e] text-white">
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <button className="p-1.5 hover:bg-white/10 rounded"><Grid3X3 size={18} /></button>
+              <button className="p-1.5 hover:bg-white/10 rounded">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </button>
+              <div className="flex items-center gap-1.5">
+                <div className="w-7 h-7 rounded-full bg-blue-400 flex items-center justify-center"><span className="text-xs font-bold">H</span></div>
+                <span className="text-sm font-semibold tracking-widest">HIVE</span>
+              </div>
+              <span className="text-white/50 text-sm">Contracts App</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-white/80">Hi [User first name]</span>
+              <button className="p-1.5 hover:bg-white/10 rounded">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </button>
+              <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
+              <span className="text-sm">Support</span>
+            </div>
+          </div>
+          <div className="flex gap-0 border-t border-white/10 px-4">
+            {['Overview', 'Documents', 'History'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setReviewComplete(false); }}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === tab ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white/90'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Main content - Review Summary */}
+        <main className="flex-1 p-6 bg-gray-50">
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* Pipeline */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {PIPELINE_STAGES.map((stage, i) => (
+                <div key={stage.id} className="flex items-center gap-1.5">
+                  <button className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+                    stage.done   ? 'bg-green-600 text-white' :
+                    stage.active ? 'bg-[#4a90d9] text-white' :
+                    'bg-gray-200 text-gray-500'
+                  }`}>
+                    {stage.active && <span className="mr-1">6</span>}
+                    {stage.label}
+                  </button>
+                  {i < PIPELINE_STAGES.length - 1 && <span className="text-gray-400 text-xs font-bold">&gt;</span>}
+                </div>
+              ))}
+            </div>
+
+            {/* Mark as Reviewed header */}
+            <Card className="bg-white border border-border p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Mark as Reviewed</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Next action: The contract is being reviewed by <span className="text-[#4a90d9]">James Seddon</span>. Once complete, the contract can enter negotiation.
+                  </p>
+                </div>
+                <Button onClick={handleReviewComplete} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
+                  Review Complete
+                </Button>
+              </div>
+            </Card>
+
+            <div className="grid grid-cols-3 gap-6">
+              {/* Left column - Risk Summary & Risk Review */}
+              <div className="space-y-4">
+                <Card className="bg-white border border-border p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk Summary</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">OVERALL RISK</div>
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-700">MEDIUM</span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-2">GUARDRAILS TRIGGERED</div>
+                      <ul className="text-xs text-foreground space-y-1">
+                        <li>• LIABILITY CAP ABOVE STANDARD LEVEL</li>
+                        <li>• INDEMNITY WORDING BROADER THAN TEMPLATE</li>
+                        <li>• EXTENDED LIMITATION PERIOD</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-2">RED/AMBER GUARDRAILS</div>
+                      <ul className="text-xs text-foreground space-y-1">
+                        <li>• 1 RED – LIABILITY CAP INCREASED TO £10M (STANDARD £5M)</li>
+                        <li>• 2 AMBER – CLIENT INDEMNITY NOT MUTUAL; LIMITATION PERIOD EXTENDED FROM 6 TO 12 YEARS</li>
+                      </ul>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="bg-white border border-border p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk Review</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    This opportunity is assessed as <span className="font-semibold text-foreground">medium</span> risk. Scope is clearly non-principal with the client holding all supply chain contracts, and jurisdiction/client track record are standard. The main concerns are below-target margin and a long programme duration, so the bid is acceptable with DOA approval on margin and active monitoring of scope and resourcing.
+                  </p>
+                  <div className="mt-4 text-right">
+                    <button className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide">Edit</button>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Right column - Review/Details tabs */}
+              <div className="col-span-2">
+                <Card className="bg-white border border-border">
+                  <div className="p-4 border-b border-border flex items-center justify-between">
+                    <div className="flex gap-6">
+                      <button className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Review</button>
+                      <button className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Details</button>
+                    </div>
+                    <Button variant="outline" className="text-sm">View Contract</Button>
+                  </div>
+
+                  <div className="border-b border-border">
+                    <div className="flex gap-6 px-4">
+                      <button
+                        onClick={() => setReviewSubTab('details')}
+                        className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                          reviewSubTab === 'details' ? 'border-[#4a90d9] text-[#4a90d9]' : 'border-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Contract details
+                      </button>
+                      <button
+                        onClick={() => setReviewSubTab('guardrails')}
+                        className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                          reviewSubTab === 'guardrails' ? 'border-[#4a90d9] text-[#4a90d9]' : 'border-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Guardrails &amp; Mitigations
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-0">
+                    {FLAGGED_CLAUSES.slice(2).map(clause => (
+                      <div key={clause.id} className="border-b border-border last:border-0">
+                        <button
+                          onClick={() => setExpandedClause(expandedClause === clause.id ? null : clause.id)}
+                          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {expandedClause === clause.id ? <ChevronDown size={16} /> : <ChevronUp size={16} className="rotate-180" />}
+                            <span className="text-sm font-medium text-foreground">{clause.title}</span>
+                          </div>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-semibold text-white ${clause.riskColor}`}>
+                            {clause.risk}
+                          </span>
+                        </button>
+                        {expandedClause === clause.id && (
+                          <div className="px-4 pb-4 space-y-3">
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Clause Type</div>
+                              <div className="text-sm text-foreground">{clause.clauseType}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Flagged Clause</div>
+                              <div className="text-sm text-muted-foreground italic">{clause.flaggedClause}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Amendments</div>
+                              <div className="text-sm text-muted-foreground">{clause.amendments}</div>
+                            </div>
+                            {clause.mitigation && (
+                              <div>
+                                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Mitigation</div>
+                                <div className="text-sm text-muted-foreground">{clause.mitigation}</div>
+                              </div>
+                            )}
+                            <div className="pt-2 text-right">
+                              <button className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide">Edit Mitigation</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-border bg-[#1e2a5e] text-white mt-auto">
+          <div className="px-4 py-4 text-xs text-white/60 space-y-1">
+            <div className="flex gap-3">
+              <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Terms &amp; Conditions</a>
+              <span>|</span>
+              <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Privacy Policy</a>
+              <span>|</span>
+              <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Cookies Policy</a>
+            </div>
+            <div className="text-[10px]">Terms and Conditions</div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Default Overview view
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
 
@@ -197,7 +689,7 @@ export default function ContractPage() {
                     <div className="text-base font-semibold text-foreground mb-1">Review contract</div>
                     <div className="text-sm text-muted-foreground">The contract will need to be reviewed before submitting for approval.</div>
                   </div>
-                  <Button className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap flex-shrink-0">
+                  <Button onClick={handleStartReview} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap flex-shrink-0">
                     Start review
                   </Button>
                 </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, HelpCircle, Flag, Grid3X3, Users } from 'lucide-react';
+import { Search, HelpCircle, Flag, Grid3X3, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -509,7 +509,7 @@ export default function DashboardPage() {
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                              <Users size={14} className="text-gray-500" />
+                              <User size={14} className="text-gray-500" />
                             </div>
                             <div>
                               <div className="text-[#4a90d9] font-medium text-sm">{row.manager}</div>
