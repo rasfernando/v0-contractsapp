@@ -279,7 +279,7 @@ export default function DashboardPage() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            Engagement records
+            Opportunity records
           </button>
         </div>
       </div>
@@ -435,11 +435,75 @@ export default function DashboardPage() {
         {activeTab === 'engagements' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-foreground mb-1">Engagement records</h2>
-              <p className="text-sm text-muted-foreground">Your active engagements</p>
+              <h2 className="text-xl font-semibold text-foreground mb-1">Opportunities</h2>
             </div>
-            <Card className="p-8 text-center text-muted-foreground">
-              <p>Engagement records content goes here</p>
+
+            <Card className="bg-white border border-border">
+              <div className="px-5 pt-5 pb-3 border-b border-border">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Records</p>
+              </div>
+
+              <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-border">
+                {/* Search */}
+                <div className="relative flex-1 max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    className="w-full pl-8 pr-3 py-1.5 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#4a90d9]"
+                  />
+                </div>
+                {/* Filters */}
+                <div className="flex items-center gap-1">
+                  {['Current', 'Conclude', 'View only'].map((f, i) => (
+                    <button
+                      key={f}
+                      className={`px-3 py-1 text-xs rounded border transition-colors ${
+                        i === 0
+                          ? 'bg-[#3d4eaa] text-white border-[#3d4eaa]'
+                          : 'bg-white text-muted-foreground border-border hover:border-gray-400'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50">
+                    <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Engagement Name</th>
+                    <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Reference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { name: 'T&T TR6638 Turner and Country Documentation', ref: '17365961' },
+                    { name: 'Grey Mcguire Corp Confidentiality Agreement', ref: '17365962' },
+                    { name: 'Innovation and Administration Centres of Delivery', ref: '17432945' },
+                    { name: 'Google Along C3 Drive Case Management Services', ref: '17519783' },
+                    { name: 'Airport Management Services', ref: '17365963' },
+                    { name: 'T&T TR6638 Turner and Country Documentation', ref: '17365964' },
+                    { name: 'DPG Williams Corp Confidentiality Agreement', ref: '17415822' },
+                    { name: 'Renovation and Administration Services at Gateway', ref: '17415823' },
+                    { name: 'Google Along C3 Drive Case Management Services', ref: '32361489' },
+                    { name: 'Project Management Services', ref: '17365965' },
+                  ].map((row, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => router.push('/opportunity')}
+                    >
+                      <td className="px-5 py-3">
+                        <span className="text-[#4a90d9] hover:underline font-medium">{row.name}</span>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">{row.ref}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </Card>
           </div>
         )}
