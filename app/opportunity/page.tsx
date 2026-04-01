@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HelpCircle, Grid3X3, ExternalLink, MapPin, Users, Check, ChevronRight } from 'lucide-react';
+import { HelpCircle, Grid3X3, ExternalLink, MapPin, Users, Check, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -119,19 +119,21 @@ function RiskAssessmentSheet({ onClose }: { onClose: () => void }) {
                     key={s.id}
                     onClick={() => isReachable && goToStep(s.id)}
                     disabled={!isReachable}
-                    className={[
-                      'flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors',
-                      isCurrent  ? 'bg-white border-r-2 border-[#4a90d9] text-[#4a90d9] font-semibold' : '',
-                      isCompleted ? 'text-foreground cursor-pointer hover:bg-white/60' : '',
-                      !isCurrent && !isCompleted ? 'text-muted-foreground cursor-not-allowed' : '',
-                    ].join(' ')}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${
+                      isCurrent  ? 'bg-white border-r-2 border-[#4a90d9] text-[#4a90d9] font-semibold' : ''
+                    } ${
+                      isCompleted ? 'text-foreground cursor-pointer hover:bg-white/60' : ''
+                    } ${
+                      !isCurrent && !isCompleted ? 'text-muted-foreground cursor-not-allowed' : ''
+                    }`}
                   >
-                    <span className={[
-                      'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold',
-                      isCompleted ? 'bg-green-500 text-white' : '',
-                      isCurrent  ? 'bg-[#4a90d9] text-white' : '',
-                      !isCompleted && !isCurrent ? 'bg-gray-200 text-gray-400' : '',
-                    ].join(' ')}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      isCompleted ? 'bg-green-500 text-white' : ''
+                    } ${
+                      isCurrent  ? 'bg-[#4a90d9] text-white' : ''
+                    } ${
+                      !isCompleted && !isCurrent ? 'bg-gray-200 text-gray-400' : ''
+                    }`}>
                       {isCompleted ? <Check size={12} /> : i + 1}
                     </span>
                     {s.label}
@@ -400,6 +402,7 @@ function RiskAssessmentSheet({ onClose }: { onClose: () => void }) {
 
 // ─── Opportunity Page ───────────────────────────────────────────────────────
 
+export default function OpportunityPage() {
   const [isRiskSheetOpen, setIsRiskSheetOpen] = useState(false);
   const [isContractSheetOpen, setIsContractSheetOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(true);
