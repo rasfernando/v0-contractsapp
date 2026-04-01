@@ -389,12 +389,12 @@ function RiskAssessmentSheet({ onClose, onComplete }: { onClose: () => void; onC
 // ─── Contract Create multi-step sheet ──────────────────────────────────────
 
 const CONTRACT_STEPS = [
-  { id: 'creation_method', label: 'Creation Method' },
-  { id: 'contract_flow',   label: 'Contract Flow' },
-  { id: 'contract_type',   label: 'Contract Type' },
+  { id: 'contract_flow',    label: 'Contract Flow' },
+  { id: 'contract_type',    label: 'Contract Type' },
   { id: 'contract_details', label: 'Contract Details' },
-  { id: 'document_upload', label: 'Document Upload' },
-  { id: 'summary',         label: 'Summary' },
+  { id: 'creation_method',  label: 'Creation Method' },
+  { id: 'document_upload',  label: 'Document Upload' },
+  { id: 'summary',          label: 'Summary' },
 ] as const;
 
 type ContractStep = typeof CONTRACT_STEPS[number]['id'];
@@ -414,7 +414,8 @@ const DOWNSTREAM_TYPES = [
 ];
 
 function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
-  const [step, setStep] = useState<ContractStep>('creation_method');
+  const router = useRouter();
+  const [step, setStep] = useState<ContractStep>('contract_flow');
 
   // Step state
   const [creationMethod, setCreationMethod] = useState<'builder' | 'upload' | null>(null);
@@ -424,13 +425,26 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
   const [contractTitle, setContractTitle]   = useState('');
   const [reviewDate, setReviewDate]         = useState('');
   const [uploadedFiles, setUploadedFiles]   = useState<string[]>([]);
-  const [note, setNote]                     = useState('');
 
   const currentIndex = CONTRACT_STEPS.findIndex(s => s.id === step);
 
+  // Steps shown in sidebar depend on chosen method
+  const visibleSteps = CONTRACT_STEPS.filter(s => {
+    // hide document_upload and summary until creation_method is chosen
+    if (s.id === 'document_upload' && creationMethod === 'builder') return false;
+    return true;
+  });
+
   const goNext = () => {
-    const next = CONTRACT_STEPS[currentIndex + 1];
-    if (next) setStep(next.id);
+    if (step === 'creation_method' && creationMethod === 'builder') {
+      // Go to builder full-page
+      onClose();
+      router.push('/contract/builder');
+      return;
+    }
+    const allIds = CONTRACT_STEPS.map(s => s.id);
+    const nextId = allIds[allIds.indexOf(step) + 1] as ContractStep | undefined;
+    if (nextId) setStep(nextId);
   };
 
   const goToStep = (id: ContractStep) => {
@@ -441,12 +455,14 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
   const typeOptions = contractFlow === 'supplier' ? DOWNSTREAM_TYPES : UPSTREAM_TYPES;
 
   const canProceed = () => {
-    if (step === 'creation_method') return creationMethod !== null;
-    if (step === 'contract_flow')   return contractFlow !== null;
-    if (step === 'contract_type')   return contractType !== null;
+    if (step === 'contract_flow')    return contractFlow !== null;
+    if (step === 'contract_type')    return contractType !== null;
     if (step === 'contract_details') return contractTitle.trim() !== '' && reviewDate !== '';
+    if (step === 'creation_method')  return creationMethod !== null;
     return true;
   };
+
+  const nextLabel = step === 'creation_method' && creationMethod === 'builder' ? 'Open Contract Builder' : 'Next';
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -462,10 +478,11 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
           {/* Left stepper */}
           <div className="w-48 bg-gray-50 border-r border-border flex-shrink-0 pt-6">
             <nav className="flex flex-col">
-              {CONTRACT_STEPS.map((s, i) => {
-                const isCompleted = i < currentIndex;
+              {visibleSteps.map((s, i) => {
+                const globalIndex = CONTRACT_STEPS.findIndex(cs => cs.id === s.id);
+                const isCompleted = globalIndex < currentIndex;
                 const isCurrent   = s.id === step;
-                const isReachable = i <= currentIndex;
+                const isReachable = globalIndex <= currentIndex;
                 return (
                   <button
                     key={s.id}
@@ -494,7 +511,7 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
           {/* Right content */}
           <div className="flex-1 overflow-y-auto p-6">
 
-            {/* STEP 1: Creation Method */}
+            {/* STEP 4: Creation Method */}
             {step === 'creation_method' && (
               <div className="space-y-4">
                 <div className="mb-6">
@@ -521,10 +538,54 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
                     }`} />
                   </button>
                 ))}
+
+                {/* Builder config fields */}
+                {creationMethod === 'builder' && (
+                  <div className="mt-6 space-y-4 border-t border-border pt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Builder Configuration</p>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Service Line</Label>
+                      <select className="w-full border border-border rounded px-3 py-2 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9]">
+                        <option>Upstream</option>
+                        <option>Downstream</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Region</Label>
+                      <select className="w-full border border-border rounded px-3 py-2 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9]">
+                        <option>EMEA</option>
+                        <option>Americas</option>
+                        <option>APAC</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Country</Label>
+                      <select className="w-full border border-border rounded px-3 py-2 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9]">
+                        <option>United Kingdom</option>
+                        <option>United States</option>
+                        <option>Germany</option>
+                        <option>France</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Select Template</Label>
+                      <select className="w-full border border-border rounded px-3 py-2 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9]">
+                        <option>T&amp;T Terms &amp; Conditions</option>
+                        <option>NDA Template</option>
+                        <option>MSA Template</option>
+                        <option>Sub-contract Template</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* STEP 2: Contract Flow */}
+            {/* STEP 1: Contract Flow */}
             {step === 'contract_flow' && (
               <div className="space-y-4">
                 <div className="mb-6">
@@ -554,7 +615,7 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
               </div>
             )}
 
-            {/* STEP 3: Contract Type */}
+            {/* STEP 2: Contract Type */}
             {step === 'contract_type' && (
               <div className="space-y-4">
                 <div className="mb-6">
@@ -587,7 +648,7 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
               </div>
             )}
 
-            {/* STEP 4: Contract Details */}
+            {/* STEP 3: Contract Details */}
             {step === 'contract_details' && (
               <div className="space-y-5">
                 <div className="mb-2">
@@ -783,7 +844,7 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
                 disabled={!canProceed()}
                 className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40 flex items-center gap-1"
               >
-                Next <ChevronRight size={16} />
+                {nextLabel} <ChevronRight size={16} />
               </Button>
             )}
           </div>
