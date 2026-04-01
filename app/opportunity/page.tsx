@@ -1,26 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HelpCircle, Grid3X3, ExternalLink, MapPin, Users, Check, ChevronRight, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { HelpCircle, Grid3X3, ExternalLink, MapPin, Users, Check, ChevronRight, Search, Upload, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 // ─── Risk Assessment multi-step sheet ──────────────────────────────────────
 
@@ -400,13 +386,422 @@ function RiskAssessmentSheet({ onClose, onComplete }: { onClose: () => void; onC
   );
 }
 
+// ─── Contract Create multi-step sheet ──────────────────────────────────────
+
+const CONTRACT_STEPS = [
+  { id: 'creation_method', label: 'Creation Method' },
+  { id: 'contract_flow',   label: 'Contract Flow' },
+  { id: 'contract_type',   label: 'Contract Type' },
+  { id: 'contract_details', label: 'Contract Details' },
+  { id: 'document_upload', label: 'Document Upload' },
+  { id: 'summary',         label: 'Summary' },
+] as const;
+
+type ContractStep = typeof CONTRACT_STEPS[number]['id'];
+
+const UPSTREAM_TYPES = [
+  { id: 'msa_tt',     label: 'MSA/Framework (T&T Only)',             desc: 'A free-standing Services Agreement or Framework Agreement between T&T and a client, covering multiple projects or services under one overarching contract.' },
+  { id: 'cbre_msa',   label: 'CBRE-led MSA',                         desc: 'Also known as a T&T master services agreement, there are two MSAs where the contracting will be facilitated to CBRE, but where the MSA will cover T&T services.' },
+  { id: 'msa_calloff',label: 'MSA/Framework Call-offs and Work Orders', desc: 'Individual project or service instructions through a call-off contract or work order that sit under an existing Master Services Agreement (MSA) or Framework agreement.' },
+  { id: 'client_msa', label: 'Client MSA',                           desc: 'A Non-Disclosure or confidentiality Agreement used solely to govern confidentiality and information sharing between T&T and the proposed client, with no services or fees attached.' },
+];
+
+const DOWNSTREAM_TYPES = [
+  { id: 'standalone_sub',   label: 'Standalone Sub-contract',                    desc: "One-off contracts between T&T and suppliers or subcontractors engaged to deliver part of the scheme under a client-facing agreement." },
+  { id: 'supplier_msa',     label: 'Supplier MSA/Framework',                     desc: 'A supplier master services framework or framework agreement between T&T and a supplier that can cover multiple projects or services under one overarching contract.' },
+  { id: 'supplier_calloff', label: 'Supplier MSA/Framework Call-offs and Work Orders', desc: 'Individual project or service instructions through a call-off contract or work order that sit under an existing Supplier Master Services Agreement (MSA) or framework agreement.' },
+  { id: 'supplier_nda',     label: 'Supplier NDA',                               desc: 'A Non-Disclosure or confidentiality Agreement used solely to govern confidentiality and information sharing between T&T and the proposed supplier contract party, with no services or fees attached.' },
+];
+
+function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState<ContractStep>('creation_method');
+
+  // Step state
+  const [creationMethod, setCreationMethod] = useState<'builder' | 'upload' | null>(null);
+  const [contractFlow, setContractFlow]     = useState<'client' | 'supplier' | null>(null);
+  const [contractType, setContractType]     = useState<string | null>(null);
+  const [msaLinked, setMsaLinked]           = useState(false);
+  const [contractTitle, setContractTitle]   = useState('');
+  const [reviewDate, setReviewDate]         = useState('');
+  const [uploadedFiles, setUploadedFiles]   = useState<string[]>([]);
+  const [note, setNote]                     = useState('');
+
+  const currentIndex = CONTRACT_STEPS.findIndex(s => s.id === step);
+
+  const goNext = () => {
+    const next = CONTRACT_STEPS[currentIndex + 1];
+    if (next) setStep(next.id);
+  };
+
+  const goToStep = (id: ContractStep) => {
+    const targetIndex = CONTRACT_STEPS.findIndex(s => s.id === id);
+    if (targetIndex <= currentIndex) setStep(id);
+  };
+
+  const typeOptions = contractFlow === 'supplier' ? DOWNSTREAM_TYPES : UPSTREAM_TYPES;
+
+  const canProceed = () => {
+    if (step === 'creation_method') return creationMethod !== null;
+    if (step === 'contract_flow')   return contractFlow !== null;
+    if (step === 'contract_type')   return contractType !== null;
+    if (step === 'contract_details') return contractTitle.trim() !== '' && reviewDate !== '';
+    return true;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="w-[680px] bg-white flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">Create a contract record</h2>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 min-h-0">
+          {/* Left stepper */}
+          <div className="w-48 bg-gray-50 border-r border-border flex-shrink-0 pt-6">
+            <nav className="flex flex-col">
+              {CONTRACT_STEPS.map((s, i) => {
+                const isCompleted = i < currentIndex;
+                const isCurrent   = s.id === step;
+                const isReachable = i <= currentIndex;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => isReachable && goToStep(s.id)}
+                    disabled={!isReachable}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${
+                      isCurrent ? 'bg-white border-r-2 border-[#4a90d9] text-[#4a90d9] font-semibold' :
+                      isCompleted ? 'text-foreground cursor-pointer hover:bg-white/60' :
+                      'text-muted-foreground cursor-not-allowed'
+                    }`}
+                  >
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      isCompleted ? 'bg-green-500 text-white' :
+                      isCurrent   ? 'bg-[#4a90d9] text-white' :
+                      'bg-gray-200 text-gray-400'
+                    }`}>
+                      {isCompleted ? <Check size={12} /> : i + 1}
+                    </span>
+                    <span className="leading-tight">{s.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Right content */}
+          <div className="flex-1 overflow-y-auto p-6">
+
+            {/* STEP 1: Creation Method */}
+            {step === 'creation_method' && (
+              <div className="space-y-4">
+                <div className="mb-6">
+                  <h3 className="text-base font-semibold text-foreground mb-1">How do you want to create this contract?</h3>
+                  <p className="text-sm text-muted-foreground">Use a client-supplied contract, or start from one of our standard templates, so we can capture the details and route it through the appropriate process.</p>
+                </div>
+                {[
+                  { id: 'builder', label: 'Contract builder', desc: 'Create a contract from scratch using our templates.' },
+                  { id: 'upload',  label: 'Upload contract',  desc: 'Upload a file to create a contract.' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setCreationMethod(opt.id as 'builder' | 'upload')}
+                    className={`w-full flex items-center justify-between p-4 border rounded text-left transition-colors ${
+                      creationMethod === opt.id ? 'border-[#4a90d9] bg-blue-50' : 'border-border hover:border-gray-400 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{opt.desc}</div>
+                    </div>
+                    <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 ${
+                      creationMethod === opt.id ? 'border-[#4a90d9] bg-[#4a90d9]' : 'border-gray-300'
+                    }`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* STEP 2: Contract Flow */}
+            {step === 'contract_flow' && (
+              <div className="space-y-4">
+                <div className="mb-6">
+                  <h3 className="text-base font-semibold text-foreground mb-1">Is this a client or supplier contract?</h3>
+                  <p className="text-sm text-muted-foreground">Choose whether this is a client-facing (upstream) or supplier/subcontract (downstream) contract so we only show the relevant contract types on the next step.</p>
+                </div>
+                {[
+                  { id: 'client',   label: 'Client contract',   desc: 'Contracts between us and the client or customer, covering the services we deliver and the commercial terms agreed with them.' },
+                  { id: 'supplier', label: 'Supplier contract',  desc: 'Contracts between us and our suppliers or subcontractors, covering the work they deliver to support our client-facing commitments.' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setContractFlow(opt.id as 'client' | 'supplier'); setContractType(null); }}
+                    className={`w-full flex items-center justify-between p-4 border rounded text-left transition-colors ${
+                      contractFlow === opt.id ? 'border-[#4a90d9] bg-blue-50' : 'border-border hover:border-gray-400 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{opt.desc}</div>
+                    </div>
+                    <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 ${
+                      contractFlow === opt.id ? 'border-[#4a90d9] bg-[#4a90d9]' : 'border-gray-300'
+                    }`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* STEP 3: Contract Type */}
+            {step === 'contract_type' && (
+              <div className="space-y-4">
+                <div className="mb-6">
+                  <h3 className="text-base font-semibold text-foreground mb-1">
+                    {contractFlow === 'supplier' ? 'What type of downstream contract is this?' : 'What type of upstream contract is this?'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {contractFlow === 'supplier'
+                      ? 'Choose the option that best describes this supplier or subcontract agreement so we can capture the right details and route it through the appropriate process.'
+                      : 'Choose the option that best describes this master or framework agreement so we can capture the right details and route it through the appropriate process.'}
+                  </p>
+                </div>
+                {typeOptions.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setContractType(opt.id)}
+                    className={`w-full flex items-center justify-between p-4 border rounded text-left transition-colors ${
+                      contractType === opt.id ? 'border-[#4a90d9] bg-blue-50' : 'border-border hover:border-gray-400 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{opt.desc}</div>
+                    </div>
+                    <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 ${
+                      contractType === opt.id ? 'border-[#4a90d9] bg-[#4a90d9]' : 'border-gray-300'
+                    }`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* STEP 4: Contract Details */}
+            {step === 'contract_details' && (
+              <div className="space-y-5">
+                <div className="mb-2">
+                  <h3 className="text-base font-semibold text-foreground mb-1">Contract Details</h3>
+                  <p className="text-sm text-muted-foreground">Use this section to capture the key details for this contract document. Give it a clear title, link it to any related contracts, and set the review date so it can be picked up by the right team at the right time.</p>
+                </div>
+
+                {/* Link to MSA */}
+                <div className="border border-border rounded p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-foreground">Link to an MSA</span>
+                    <button className="text-xs text-[#4a90d9] hover:underline">+</button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Search for a MSA by Engagement record number or Contract record number</p>
+                  {!msaLinked ? (
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input placeholder="Search MSA..." className="pl-8 bg-white text-sm" />
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded p-3 space-y-1">
+                      <div className="text-sm font-semibold text-[#4a90d9]">HSBC 1 London Place MSA</div>
+                      <div className="text-xs text-muted-foreground">Contract record id: CR12345</div>
+                      <div className="text-xs text-muted-foreground">Services covered: Agency PM, Principal</div>
+                      <div className="text-xs text-muted-foreground">Geographical coverage: United Kingdom</div>
+                      <div className="text-xs text-muted-foreground">End date: 01 January 2027</div>
+                      <button onClick={() => setMsaLinked(false)} className="text-xs text-red-500 hover:underline mt-1">Remove linked contract</button>
+                    </div>
+                  )}
+                  {!msaLinked && (
+                    <button onClick={() => setMsaLinked(true)} className="text-xs text-[#4a90d9] hover:underline">+ Link MSA result</button>
+                  )}
+                </div>
+
+                {/* Contract Title */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contract record title*</Label>
+                  <Input
+                    value={contractTitle}
+                    onChange={e => setContractTitle(e.target.value)}
+                    placeholder="Suggested format for title goes here"
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-muted-foreground">Suggested format for title goes here</p>
+                </div>
+
+                {/* Review Date */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Review date*</Label>
+                  <Input
+                    type="date"
+                    value={reviewDate}
+                    onChange={e => setReviewDate(e.target.value)}
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-muted-foreground">Enter the date this contract needs to be reviewed to.</p>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 5: Document Upload */}
+            {step === 'document_upload' && (
+              <div className="space-y-5">
+                <div className="mb-2">
+                  <h3 className="text-base font-semibold text-foreground mb-1">Document Upload</h3>
+                  <p className="text-sm text-muted-foreground">Use this section to upload the contract and any supporting documents or everything else in one place against this record. You can add multiple files and flag the primary contract document to make it clear which version should be used for review and approvals.</p>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 block">Upload your contract document(s)</Label>
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-[#4a90d9] transition-colors"
+                    onClick={() => setUploadedFiles(prev => [...prev, `Contract_Document_${prev.length + 1}.docx`])}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+                      <Upload size={22} className="text-[#4a90d9]" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Browse to upload</p>
+                    <p className="text-xs text-muted-foreground mt-1">File types supported: docx, PDF. Maximum file size: 12mb</p>
+                  </div>
+                </div>
+
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {uploadedFiles.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 border border-border rounded bg-white">
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} className="text-muted-foreground" />
+                          <span className="text-sm text-[#4a90d9]">{f}</span>
+                          {i === 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-[#4a90d9] text-white font-medium">PRIMARY</span>}
+                        </div>
+                        <button onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}>
+                          <X size={14} className="text-muted-foreground hover:text-foreground" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* STEP 6: Summary */}
+            {step === 'summary' && (
+              <div className="space-y-5">
+                <div className="mb-2">
+                  <h3 className="text-base font-semibold text-foreground mb-1">Summary</h3>
+                  <p className="text-sm text-muted-foreground">Use this page to review everything before you continue — check the linked contract, key contract details and the documents you have uploaded. If anything looks wrong or missing, go back and update it now so the right version is routed through the process.</p>
+                </div>
+
+                {/* Contract Type summary */}
+                <div className="border border-border rounded overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-border">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contract Type</span>
+                    <button onClick={() => setStep('contract_type')} className="text-xs text-[#4a90d9] font-semibold hover:underline">EDIT</button>
+                  </div>
+                  <div className="px-4 py-3 space-y-1">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide">Contract type</div>
+                    <div className="text-sm font-medium text-foreground">
+                      {typeOptions.find(t => t.id === contractType)?.label ?? '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contract Details summary */}
+                <div className="border border-border rounded overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-border">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contract Details</span>
+                    <button onClick={() => setStep('contract_details')} className="text-xs text-[#4a90d9] font-semibold hover:underline">EDIT</button>
+                  </div>
+                  <div className="px-4 py-3 space-y-3">
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Linked MSA</div>
+                      <div className="text-sm font-medium text-foreground">{msaLinked ? 'HSBC 1 London Place MSA' : '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Contract record title</div>
+                      <div className="text-sm font-medium text-foreground">{contractTitle || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Required Review Date</div>
+                      <div className="text-sm font-medium text-foreground">
+                        {reviewDate ? new Date(reviewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents summary */}
+                <div className="border border-border rounded overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-border">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Uploaded Document(s)</span>
+                    <button onClick={() => setStep('document_upload')} className="text-xs text-[#4a90d9] font-semibold hover:underline">EDIT</button>
+                  </div>
+                  <div className="px-4 py-3 space-y-2">
+                    {uploadedFiles.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+                    ) : uploadedFiles.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <FileText size={14} className="text-muted-foreground" />
+                        <span className="text-sm text-[#4a90d9]">{f}</span>
+                        {i === 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-[#4a90d9] text-white font-medium">PRIMARY</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-white flex-shrink-0">
+          <Button variant="outline" onClick={onClose} className="border-border text-foreground">
+            Cancel
+          </Button>
+          <div className="flex gap-2">
+            {step === 'summary' ? (
+              <>
+                <Button variant="outline" className="border-border text-foreground text-sm">
+                  Save as draft
+                </Button>
+                <Button variant="outline" className="border-border text-foreground text-sm" onClick={() => { onComplete(); onClose(); }}>
+                  Create Record
+                </Button>
+                <Button onClick={() => { onComplete(); onClose(); }} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white text-sm">
+                  Create Record &amp; Submit for Review
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={goNext}
+                disabled={!canProceed()}
+                className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40 flex items-center gap-1"
+              >
+                Next <ChevronRight size={16} />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Opportunity Page ───────────────────────────────────────────────────────
 
 export default function OpportunityPage() {
+  const router = useRouter();
   const [isRiskSheetOpen, setIsRiskSheetOpen] = useState(false);
   const [isContractSheetOpen, setIsContractSheetOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(true);
   const [riskAssessments, setRiskAssessments] = useState<{ id: number; name: string; date: string; status: string }[]>([]);
+  const [contracts, setContracts] = useState<{ id: number; name: string; date: string; status: string }[]>([]);
 
   // Hide success message after 5 seconds
   useEffect(() => {
@@ -642,25 +1037,50 @@ export default function OpportunityPage() {
                 Contract Records
               </h3>
 
-              <div className="space-y-4 text-center py-10">
-                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
-                  <Users size={28} className="text-gray-400" />
+              {contracts.length === 0 ? (
+                <div className="space-y-4 text-center py-10">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                    <Users size={28} className="text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      There are no contracts linked to this Engagement.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Use the button below to create a contract record.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsContractSheetOpen(true)}
+                    className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
+                  >
+                    Create a contract record
+                  </Button>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    There are no contracts linked to this Engagement.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Use the button below to create a contract record.
-                  </p>
+              ) : (
+                <div className="space-y-3">
+                  {contracts.map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => router.push('/contract')}
+                      className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <div>
+                        <div className="text-sm font-medium text-[#4a90d9] hover:underline">{c.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Created {c.date}</div>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">{c.status}</span>
+                    </div>
+                  ))}
+                  <Button
+                    onClick={() => setIsContractSheetOpen(true)}
+                    variant="outline"
+                    className="w-full mt-2 text-xs border-dashed"
+                  >
+                    + Create another contract record
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => setIsContractSheetOpen(true)}
-                  className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
-                >
-                  Create a contract record
-                </Button>
-              </div>
+              )}
             </Card>
 
           </div>
@@ -746,60 +1166,19 @@ export default function OpportunityPage() {
       )}
 
       {/* Create Contract Sheet */}
-      <Sheet open={isContractSheetOpen} onOpenChange={setIsContractSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader className="pb-4">
-            <SheetTitle className="text-xl font-semibold">Create Contract Record</SheetTitle>
-            <SheetDescription className="text-sm text-muted-foreground leading-relaxed">
-              Set up a new contract record for this opportunity. Complete all required fields to proceed.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-6 px-4 pb-4">
-            <div className="space-y-2">
-              <Label>Contract Name*</Label>
-              <Input placeholder="Enter contract name" className="bg-white" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Contract Value*</Label>
-              <Input placeholder="Enter contract value" type="number" className="bg-white" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Contract Status*</Label>
-              <Select>
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <textarea className="w-full p-2 border border-border rounded bg-white text-sm" rows={4} placeholder="Enter contract description" />
-            </div>
-          </div>
-
-          <SheetFooter className="px-4 py-4 border-t border-border">
-            <Button
-              onClick={() => setIsContractSheetOpen(false)}
-              variant="outline"
-              className="border-border text-foreground hover:bg-muted"
-            >
-              Cancel
-            </Button>
-            <Button className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white">
-              Create Contract
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      {isContractSheetOpen && (
+        <ContractCreateSheet
+          onClose={() => setIsContractSheetOpen(false)}
+          onComplete={() => {
+            setContracts(prev => [...prev, {
+              id: prev.length + 1,
+              name: `Contract Record ${prev.length + 1}`,
+              date: new Date().toLocaleDateString('en-GB'),
+              status: 'Contract Preparation',
+            }]);
+          }}
+        />
+      )}
     </div>
   );
 }
