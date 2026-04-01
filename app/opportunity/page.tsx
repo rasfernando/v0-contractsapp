@@ -50,7 +50,7 @@ const SUMMARY_ROWS = [
   { category: 'Delivery Complexity',status: 'Moderate',     statusColor: 'bg-amber-400', notes: 'Multiple subcontractors' },
 ];
 
-function RiskAssessmentSheet({ onClose }: { onClose: () => void }) {
+function RiskAssessmentSheet({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
   const [step, setStep] = useState<RiskStep>('project');
 
   // Project step state
@@ -389,7 +389,7 @@ function RiskAssessmentSheet({ onClose }: { onClose: () => void }) {
                 Next <ChevronRight size={16} />
               </Button>
             ) : (
-              <Button onClick={onClose} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white">
+              <Button onClick={() => { onComplete(); onClose(); }} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white">
                 Create record
               </Button>
             )}
@@ -406,6 +406,7 @@ export default function OpportunityPage() {
   const [isRiskSheetOpen, setIsRiskSheetOpen] = useState(false);
   const [isContractSheetOpen, setIsContractSheetOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(true);
+  const [riskAssessments, setRiskAssessments] = useState<{ id: number; name: string; date: string; status: string }[]>([]);
 
   // Hide success message after 5 seconds
   useEffect(() => {
@@ -583,59 +584,86 @@ export default function OpportunityPage() {
             </div>
           </Card>
 
-          {/* Middle Column - Pre-Engagement Records */}
-          <Card className="bg-white border border-border p-6 col-span-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-6">
-              Pre-Engagement Records
-            </h3>
+          {/* Right Column - Risk Assessment Records + Contract Records stacked */}
+          <div className="col-span-2 flex flex-col gap-6">
 
-            <div className="space-y-4 text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
-                <MapPin size={32} className="text-gray-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground mb-1">
-                  There are no pre-engagement records linked to this engagement.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Use the button below to create a pre-engagement record.
-                </p>
-              </div>
-              <Button
-                onClick={() => setIsRiskSheetOpen(true)}
-                className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium w-full mt-6"
-              >
-                Create a Risk Assessment
-              </Button>
-            </div>
-          </Card>
+            {/* Risk Assessment Records */}
+            <Card className="bg-white border border-border p-6">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                Risk Assessment Records
+              </h3>
 
-          {/* Right Column - Contract Records */}
-          <Card className="bg-white border border-border p-6 col-span-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-6">
-              Contract Records
-            </h3>
+              {riskAssessments.length === 0 ? (
+                <div className="space-y-4 text-center py-10">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                    <MapPin size={28} className="text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      There are no risk assessment records linked to this engagement.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Use the button below to create a risk assessment record.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsRiskSheetOpen(true)}
+                    className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
+                  >
+                    Create a Risk Assessment
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {riskAssessments.map(ra => (
+                    <div key={ra.id} className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors">
+                      <div>
+                        <div className="text-sm font-medium text-[#4a90d9] hover:underline cursor-pointer">{ra.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Created {ra.date}</div>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">{ra.status}</span>
+                    </div>
+                  ))}
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full mt-2 text-xs text-muted-foreground border-dashed"
+                    title="Only one risk assessment per opportunity"
+                  >
+                    Risk assessment already created
+                  </Button>
+                </div>
+              )}
+            </Card>
 
-            <div className="space-y-4 text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
-                <Users size={32} className="text-gray-400" />
+            {/* Contract Records */}
+            <Card className="bg-white border border-border p-6">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                Contract Records
+              </h3>
+
+              <div className="space-y-4 text-center py-10">
+                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                  <Users size={28} className="text-gray-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    There are no contracts linked to this Engagement.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Use the button below to create a contract record.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setIsContractSheetOpen(true)}
+                  className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
+                >
+                  Create a contract record
+                </Button>
               </div>
-              <div>
-                <p className="text-sm font-medium text-foreground mb-1">
-                  There are no contracts linked to this Engagement.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Use the button below to create a contract record.
-                </p>
-              </div>
-              <Button
-                onClick={() => setIsContractSheetOpen(true)}
-                className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium w-full mt-6"
-              >
-                Create a contract record
-              </Button>
-            </div>
-          </Card>
+            </Card>
+
+          </div>
         </div>
 
         {/* Recent Changes Section */}
@@ -687,7 +715,7 @@ export default function OpportunityPage() {
         <div className="px-4 py-4 text-xs text-white/60 space-y-1">
           <div className="flex gap-3">
             <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
-              Terms & Conditions
+              Terms &amp; Conditions
             </a>
             <span>|</span>
             <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
@@ -698,13 +726,23 @@ export default function OpportunityPage() {
               Cookies Policy
             </a>
           </div>
-          <div className="text-[10px]">All rights reserved. Turner & Townsend © 2025</div>
+          <div className="text-[10px]">All rights reserved. Turner &amp; Townsend &copy; 2025</div>
         </div>
       </footer>
 
       {/* Create Risk Assessment Sheet */}
       {isRiskSheetOpen && (
-        <RiskAssessmentSheet onClose={() => setIsRiskSheetOpen(false)} />
+        <RiskAssessmentSheet
+          onClose={() => setIsRiskSheetOpen(false)}
+          onComplete={() => {
+            setRiskAssessments(prev => [...prev, {
+              id: prev.length + 1,
+              name: `Risk Assessment ${prev.length + 1}`,
+              date: new Date().toLocaleDateString('en-GB'),
+              status: 'Pending Approval',
+            }]);
+          }}
+        />
       )}
 
       {/* Create Contract Sheet */}
