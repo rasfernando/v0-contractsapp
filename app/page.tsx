@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, HelpCircle, Flag, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,6 +148,7 @@ const TASKS = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'tasks' | 'engagements'>('tasks');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('due-overdue');
@@ -200,6 +202,8 @@ export default function DashboardPage() {
     });
     resetForm();
     setIsCreateSheetOpen(false);
+    // Navigate to opportunity page
+    router.push('/opportunity');
   };
 
   return (
