@@ -27,9 +27,11 @@ import {
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
 } from '@/lib/contract-data';
+import { useUser, canSeeTask, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
+import { UserSwitcher } from '@/components/user-switcher';
 
-// Tasks based on existing opportunities
-const TASKS = [
+// Tasks based on existing opportunities - each task is assigned to a specific role
+const ALL_TASKS = [
   {
     id: 1,
     name: 'Complete RM Review',
@@ -42,6 +44,7 @@ const TASKS = [
     workspaceLink: 'View Contract',
     priority: 'high',
     opportunityId: 'OPP-001',
+    assignedTo: 'contract_reviewer',
   },
   {
     id: 2,
@@ -55,6 +58,7 @@ const TASKS = [
     workspaceLink: 'View Contract',
     priority: 'high',
     opportunityId: 'OPP-002',
+    assignedTo: 'opportunity_manager',
   },
   {
     id: 3,
@@ -68,6 +72,7 @@ const TASKS = [
     workspaceLink: 'View Assessment',
     priority: 'high',
     opportunityId: 'OPP-003',
+    assignedTo: 'contract_reviewer',
   },
   {
     id: 4,
@@ -81,6 +86,7 @@ const TASKS = [
     workspaceLink: 'View Assessment',
     priority: 'medium',
     opportunityId: 'OPP-004',
+    assignedTo: 'opportunity_manager',
   },
   {
     id: 5,
@@ -94,6 +100,7 @@ const TASKS = [
     workspaceLink: 'View Contract',
     priority: 'medium',
     opportunityId: 'OPP-005',
+    assignedTo: 'approver',
   },
   {
     id: 6,
@@ -107,6 +114,7 @@ const TASKS = [
     workspaceLink: 'View Contract',
     priority: 'low',
     opportunityId: 'OPP-006',
+    assignedTo: 'authorised_signatory',
   },
   {
     id: 7,
@@ -120,6 +128,7 @@ const TASKS = [
     workspaceLink: 'View Opportunity',
     priority: 'low',
     opportunityId: 'OPP-007',
+    assignedTo: 'opportunity_manager',
   },
   {
     id: 8,
@@ -133,6 +142,7 @@ const TASKS = [
     workspaceLink: 'View Contract',
     priority: 'low',
     opportunityId: 'OPP-008',
+    assignedTo: 'opportunity_manager',
   },
   {
     id: 9,
@@ -146,6 +156,7 @@ const TASKS = [
     workspaceLink: 'View Assessment',
     priority: 'low',
     opportunityId: 'OPP-009',
+    assignedTo: 'opportunity_manager',
   },
   {
     id: 10,
@@ -159,15 +170,93 @@ const TASKS = [
     workspaceLink: 'View Contract',
     priority: 'low',
     opportunityId: 'OPP-010',
+    assignedTo: 'authorised_signatory',
+  },
+  // Additional tasks for Contract Reviewer
+  {
+    id: 11,
+    name: 'Review MSA Terms',
+    activity: 'Contract Review',
+    workItem: 'Amazon Logistics Framework Agreement',
+    client: 'Amazon UK Services Ltd',
+    dueDate: '05/04/2026',
+    relativeDate: 'Due: 3 days',
+    status: 'RM Review',
+    workspaceLink: 'View Contract',
+    priority: 'high',
+    opportunityId: 'OPP-011',
+    assignedTo: 'contract_reviewer',
+  },
+  {
+    id: 12,
+    name: 'Review Risk Assessment',
+    activity: 'Risk Assessment Approval',
+    workItem: 'Data Centre Construction Assessment',
+    client: 'Microsoft Ireland',
+    dueDate: '10/04/2026',
+    relativeDate: 'Due: 1 week',
+    status: 'Awaiting Review',
+    workspaceLink: 'View Assessment',
+    priority: 'medium',
+    opportunityId: 'OPP-012',
+    assignedTo: 'contract_reviewer',
+  },
+  // Additional tasks for Approver
+  {
+    id: 13,
+    name: 'Approve High-Value Contract',
+    activity: 'Contract Approval',
+    workItem: 'Shell Rotterdam Refinery Services',
+    client: 'Shell International B.V.',
+    dueDate: '08/04/2026',
+    relativeDate: 'Due: 6 days',
+    status: 'Pending Approval',
+    workspaceLink: 'View Contract',
+    priority: 'high',
+    opportunityId: 'OPP-013',
+    assignedTo: 'approver',
+  },
+  {
+    id: 14,
+    name: 'Review and Approve Amendment',
+    activity: 'Contract Approval',
+    workItem: 'BP Aberdeen Amendment 3',
+    client: 'BP Exploration Operating Co.',
+    dueDate: '15/04/2026',
+    relativeDate: 'Due: 2 weeks',
+    status: 'Amendment Review',
+    workspaceLink: 'View Contract',
+    priority: 'medium',
+    opportunityId: 'OPP-014',
+    assignedTo: 'approver',
+  },
+  // Additional tasks for Authorised Signatory
+  {
+    id: 15,
+    name: 'Execute Framework Agreement',
+    activity: 'Contract Signing',
+    workItem: 'Network Rail Southern Framework',
+    client: 'Network Rail Infrastructure Ltd',
+    dueDate: '12/04/2026',
+    relativeDate: 'Due: 10 days',
+    status: 'Ready to Sign',
+    workspaceLink: 'View Contract',
+    priority: 'medium',
+    opportunityId: 'OPP-015',
+    assignedTo: 'authorised_signatory',
   },
 ];
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { currentUser } = useUser();
   const [activeTab, setActiveTab] = useState<'tasks' | 'engagements'>('tasks');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('due-overdue');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  
+  // Filter tasks based on current user's role
+  const TASKS = ALL_TASKS.filter(task => task.assignedTo === currentUser.role);
 
   // Form state for Create Opportunity
   const [opportunityName, setOpportunityName] = useState('');
@@ -242,10 +331,7 @@ export default function DashboardPage() {
               <span className="text-sm text-white/70 ml-2">Contracts App</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm">Hi [User first name]</span>
-              <button className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                <span className="text-xs font-medium">U</span>
-              </button>
+              <UserSwitcher />
               <div className="flex items-center gap-1.5 text-sm">
                 <HelpCircle size={16} />
                 <span>Support</span>
@@ -263,12 +349,14 @@ export default function DashboardPage() {
                 your contracts through to approval.
               </p>
             </div>
-            <Button
-              onClick={() => setIsCreateSheetOpen(true)}
-              className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium rounded-full px-5"
-            >
-              Create new Opportunity record
-            </Button>
+            {canCreateOpportunity(currentUser.role) && (
+              <Button
+                onClick={() => setIsCreateSheetOpen(true)}
+                className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium rounded-full px-5"
+              >
+                Create new Opportunity record
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -307,7 +395,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-1">Tasks assigned to you</h2>
               <p className="text-sm text-muted-foreground">
-                All tasks assigned to you across all of your workspaces are listed below
+                Showing tasks for <span className="font-medium text-foreground">{getRoleLabel(currentUser.role)}</span> ({currentUser.name})
               </p>
             </div>
 
@@ -331,7 +419,7 @@ export default function DashboardPage() {
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    Due and overdue (20)
+                    Due and overdue ({TASKS.length})
                   </button>
                   <button
                     onClick={() => setFilterStatus('completed')}
@@ -380,6 +468,16 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {TASKS.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center">
+                          <div className="text-muted-foreground">
+                            <div className="text-lg font-medium mb-1">No tasks assigned</div>
+                            <div className="text-sm">There are no tasks assigned to your role ({getRoleLabel(currentUser.role)})</div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {TASKS.map((task) => (
                       <tr
                         key={task.id}

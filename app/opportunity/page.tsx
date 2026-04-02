@@ -14,6 +14,8 @@ import {
   getContractStatusStyle,
 } from '@/lib/contract-data';
 import type { OpportunityRow, OpportunityRiskAssessment, OpportunityContract } from '@/lib/contract-data';
+import { useUser, canCreateContract, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
+import { UserSwitcher } from '@/components/user-switcher';
 
 // ─── Risk Assessment multi-step sheet ──────────────────────────────────────
 
@@ -867,10 +869,15 @@ function OpportunityPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const opportunityId = searchParams.get('id') || 'OPP-001';
+  const { currentUser } = useUser();
   
   const [isRiskSheetOpen, setIsRiskSheetOpen] = useState(false);
   const [isContractSheetOpen, setIsContractSheetOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Permission checks based on role
+  const canCreate = canCreateOpportunity(currentUser.role);
+  const canCreateContracts = canCreateContract(currentUser.role);
   
   // Get the opportunity data
   const opportunity = getOpportunityById(opportunityId) || OPPORTUNITY_ROWS[0];
@@ -917,10 +924,7 @@ function OpportunityPageContent() {
               <span className="text-sm text-white/70 ml-2">Contracts App</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm">Hi [User first name]</span>
-              <button className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                <span className="text-xs font-medium">U</span>
-              </button>
+              <UserSwitcher />
               <div className="flex items-center gap-1.5 text-sm">
                 <HelpCircle size={16} />
                 <span>Support</span>
@@ -979,7 +983,7 @@ function OpportunityPageContent() {
               `This opportunity has ${riskAssessments.length} risk assessment(s) and ${contracts.length} contract(s) associated with it.`}
           </p>
           <div className="flex gap-3">
-            {needsRiskAssessment && (
+            {needsRiskAssessment && canCreate && (
               <Button
                 onClick={() => setIsRiskSheetOpen(true)}
                 className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
@@ -987,7 +991,7 @@ function OpportunityPageContent() {
                 {riskAssessments.length === 0 ? 'Create a Risk Assessment' : 'Continue Risk Assessment'}
               </Button>
             )}
-            {riskComplete && (
+            {riskComplete && canCreateContracts && (
               <Button
                 onClick={() => setIsContractSheetOpen(true)}
                 className={needsRiskAssessment ? 'border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50' : 'bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium'}
@@ -995,6 +999,11 @@ function OpportunityPageContent() {
               >
                 Create a Contract
               </Button>
+            )}
+            {!canCreate && !canCreateContracts && (
+              <p className="text-sm text-muted-foreground italic">
+                You are viewing as {getRoleLabel(currentUser.role)}. Only Opportunity Managers can create records.
+              </p>
             )}
           </div>
         </Card>

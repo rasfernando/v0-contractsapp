@@ -21,6 +21,8 @@ import {
   formatDate,
   type Task,
 } from '@/lib/contract-data';
+import { useUser, canReviewContract, canApproveContract, canSignContract, canNegotiateContract, getRoleLabel } from '@/lib/user-context';
+import { UserSwitcher } from '@/components/user-switcher';
 
 const PIPELINE_STAGES = [
   { id: 'prep',        label: 'Contract Preparation',          done: true  },
@@ -120,13 +122,8 @@ function AppHeader({
           </div>
           <span className="text-white/50 text-sm">Contracts App</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-white/80">Hi [User first name]</span>
-          <button className="p-1.5 hover:bg-white/10 rounded">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-            </svg>
-          </button>
+<div className="flex items-center gap-4">
+  <UserSwitcher />
           <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
           <span className="text-sm">Support</span>
         </div>
@@ -598,9 +595,13 @@ function ApprovalExplanationTray({
 function SigningView({
   onSign,
   onCancel,
+  canSign,
+  roleName,
 }: {
   onSign: () => void;
   onCancel: () => void;
+  canSign: boolean;
+  roleName: string;
 }) {
   const [signatureName, setSignatureName] = useState('David Rose');
   const [signaturePosition, setSignaturePosition] = useState('Divisional Director');
@@ -793,9 +794,15 @@ function SigningView({
             <Button onClick={onCancel} variant="ghost" className="text-[#4a90d9] hover:text-[#3a7fc9] hover:bg-blue-50">
               Cancel
             </Button>
-            <Button onClick={onSign} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white">
-              Sign contract
-            </Button>
+            {canSign ? (
+              <Button onClick={onSign} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white">
+                Sign contract
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Viewing as {roleName}. Only Authorised Signatories can sign contracts.
+              </p>
+            )}
           </div>
         </div>
       </main>
@@ -818,6 +825,7 @@ function SigningView({
 
 export default function ContractPage() {
   const router = useRouter();
+  const { currentUser } = useUser();
   const [activeTab, setActiveTab] = useState('Overview');
   const [isReviewing, setIsReviewing] = useState(false);
   const [expandedClause, setExpandedClause] = useState<number | null>(1);
@@ -833,6 +841,12 @@ export default function ContractPage() {
   const [uploadStep, setUploadStep] = useState<'upload' | 'action'>('upload');
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [nextAction, setNextAction] = useState<'approval' | 're-review' | 'no-action' | null>(null);
+  
+  // Permission checks based on role
+  const canReview = canReviewContract(currentUser.role);
+  const canApprove = canApproveContract(currentUser.role);
+  const canSign = canSignContract(currentUser.role);
+  const canNegotiate = canNegotiateContract(currentUser.role);
 
   const handleStartReview = () => { setIsReviewing(true); setActiveTab('Review'); };
   const handleMarkAsReviewed = () => { setReviewComplete(true); setIsReviewing(false); };
@@ -1028,9 +1042,15 @@ export default function ContractPage() {
                     <span className="text-[#4a90d9]">James Seddon</span>. Once complete, the contract can enter negotiation.
                   </p>
                 </div>
-                <Button onClick={handleReviewComplete} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
-                  Review Complete
-                </Button>
+                {canReview ? (
+                  <Button onClick={handleReviewComplete} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
+                    Review Complete
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    Viewing as {getRoleLabel(currentUser.role)}
+                  </p>
+                )}
               </div>
             </Card>
 
@@ -1101,14 +1121,20 @@ export default function ContractPage() {
                     <span className="text-[#4a90d9]">John Doe</span>. Upload any new versions of the contract for re-review or approval.
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button onClick={handleOpenUploadModal} variant="outline" className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50 whitespace-nowrap">
-                    Upload New Contract Version
-                  </Button>
-                  <Button onClick={handleSubmitForApproval} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
-                    Submit for Approval
-                  </Button>
-                </div>
+                {canNegotiate ? (
+                  <div className="flex items-center gap-3">
+                    <Button onClick={handleOpenUploadModal} variant="outline" className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50 whitespace-nowrap">
+                      Upload New Contract Version
+                    </Button>
+                    <Button onClick={handleSubmitForApproval} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
+                      Submit for Approval
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    Viewing as {getRoleLabel(currentUser.role)}
+                  </p>
+                )}
               </div>
             </Card>
 
@@ -1176,16 +1202,11 @@ export default function ContractPage() {
               </div>
               <span className="text-white/50 text-sm">Contracts App</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-white/80">Hi [User first name]</span>
-              <button className="p-1.5 hover:bg-white/10 rounded">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-                </svg>
-              </button>
-              <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
-              <span className="text-sm">Support</span>
-            </div>
+          <div className="flex items-center gap-4">
+            <UserSwitcher />
+            <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
+            <span className="text-sm">Support</span>
+          </div>
           </div>
           <div className="px-4 py-2 border-t border-white/10">
             <div className="text-sm font-semibold">1 LONDON STREET - 1823456</div>
@@ -1245,7 +1266,7 @@ export default function ContractPage() {
                     )}
                   </p>
                 </div>
-                {!approvalAction && (
+                {!approvalAction && canApprove && (
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Button onClick={handleRequestInfo} variant="outline" className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50 whitespace-nowrap text-sm">
                       Request more Information
@@ -1253,6 +1274,11 @@ export default function ContractPage() {
                     <Button onClick={handleReject} className="bg-red-600 hover:bg-red-700 text-white whitespace-nowrap text-sm">Reject</Button>
                     <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap text-sm">Approve</Button>
                   </div>
+                )}
+                {!approvalAction && !canApprove && (
+                  <p className="text-sm text-muted-foreground italic">
+                    Viewing as {getRoleLabel(currentUser.role)}. Only Approvers can approve or reject contracts.
+                  </p>
                 )}
               </div>
             </Card>
@@ -1301,7 +1327,7 @@ export default function ContractPage() {
 
   // ── Signing View ──────────────────────────────────────────────────────────
   if (isSigning) {
-    return <SigningView onSign={handleSignContract} onCancel={() => setIsSigning(false)} />;
+    return <SigningView onSign={handleSignContract} onCancel={() => setIsSigning(false)} canSign={canSign} roleName={getRoleLabel(currentUser.role)} />;
   }
 
   // ── Default Overview View ─────────────────────────────────────────────────
