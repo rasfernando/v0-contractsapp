@@ -1463,9 +1463,15 @@ export default function ContractPage() {
                     <div className="text-base font-semibold text-foreground mb-1">Review contract</div>
                     <div className="text-sm text-muted-foreground">The contract will need to be reviewed before submitting for approval.</div>
                   </div>
-                  <Button onClick={handleStartReview} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap flex-shrink-0">
-                    Start review
-                  </Button>
+                  {canReview ? (
+                    <Button onClick={handleStartReview} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap flex-shrink-0">
+                      Start review
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic whitespace-nowrap">
+                      Viewing as {getRoleLabel(currentUser.role)}
+                    </p>
+                  )}
                 </div>
               </Card>
 
