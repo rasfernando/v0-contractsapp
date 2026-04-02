@@ -396,6 +396,160 @@ export const EXAMPLE_MSA_SUMMARY: MSAKeyDealSummary = {
   preApprovedFramework: true,
 };
 
+// ─── Risk Assessment Status ────────────────────────────────────────────────────
+
+export type RiskAssessmentStatus = 'required' | 'in_progress' | 'awaiting_approval' | 'complete';
+export type ContractStatus = 'preparation' | 'rm_review' | 'negotiation' | 'approval' | 'signing' | 'active' | 'complete' | null;
+
+export interface OpportunityRow {
+  id: string;
+  name: string;
+  reference: string;
+  manager: string;
+  managerInitials: string;
+  client: string;
+  riskAssessmentStatus: RiskAssessmentStatus;
+  contractStatus: ContractStatus;
+}
+
+export const OPPORTUNITY_ROWS: OpportunityRow[] = [
+  {
+    id: 'OPP-001',
+    name: '1 London Street Development',
+    reference: 'OPP-2024-1823456',
+    manager: 'John Doe',
+    managerInitials: 'JD',
+    client: 'Brookfield Properties Ltd',
+    riskAssessmentStatus: 'complete',
+    contractStatus: 'rm_review',
+  },
+  {
+    id: 'OPP-002',
+    name: 'TD TR5938 Town and Country Decommission',
+    reference: '123456ENG',
+    manager: 'David Smith',
+    managerInitials: 'DS',
+    client: 'TD Bank Group',
+    riskAssessmentStatus: 'complete',
+    contractStatus: 'negotiation',
+  },
+  {
+    id: 'OPP-003',
+    name: 'EMD Millipore Corp - Confidentiality Agreement',
+    reference: '193475ENG',
+    manager: 'Susan Davies',
+    managerInitials: 'SD',
+    client: 'Exelead a Merck Millipore Sigma Company',
+    riskAssessmentStatus: 'awaiting_approval',
+    contractStatus: null,
+  },
+  {
+    id: 'OPP-004',
+    name: 'Renovation And Rehabilitation Services Of Embassy',
+    reference: '173432ENG',
+    manager: 'Kalp Patel',
+    managerInitials: 'KP',
+    client: 'The Embassy of the State of Kuwait',
+    riskAssessmentStatus: 'in_progress',
+    contractStatus: null,
+  },
+  {
+    id: 'OPP-005',
+    name: 'Google Vizag E3 Sites Cost Management Services',
+    reference: '323414ENG',
+    manager: 'Jennifer Budge',
+    managerInitials: 'JB',
+    client: 'Google India Private Limited',
+    riskAssessmentStatus: 'complete',
+    contractStatus: 'approval',
+  },
+  {
+    id: 'OPP-006',
+    name: 'Project Management Services – Paris HQ Fit-Out',
+    reference: '223474ENG',
+    manager: 'John Pilkington',
+    managerInitials: 'JP',
+    client: 'CBRE GWS France SAS',
+    riskAssessmentStatus: 'complete',
+    contractStatus: 'signing',
+  },
+  {
+    id: 'OPP-007',
+    name: 'Manchester Arena District Master Plan',
+    reference: '334512ENG',
+    manager: 'Rachel Morris',
+    managerInitials: 'RM',
+    client: 'Aviva Investors',
+    riskAssessmentStatus: 'required',
+    contractStatus: null,
+  },
+  {
+    id: 'OPP-008',
+    name: 'HSBC Data Centre Resilience Programme',
+    reference: '445623ENG',
+    manager: 'Omar Hassan',
+    managerInitials: 'OH',
+    client: 'HSBC Holdings plc',
+    riskAssessmentStatus: 'complete',
+    contractStatus: 'active',
+  },
+  {
+    id: 'OPP-009',
+    name: 'Edinburgh Waterfront Mixed-Use Development',
+    reference: '556734ENG',
+    manager: 'Claire Sutton',
+    managerInitials: 'CS',
+    client: 'Lendlease Europe',
+    riskAssessmentStatus: 'in_progress',
+    contractStatus: null,
+  },
+  {
+    id: 'OPP-010',
+    name: 'Crossrail Station Fit-Out Works',
+    reference: '667845ENG',
+    manager: 'Peter Walsh',
+    managerInitials: 'PW',
+    client: 'Transport for London',
+    riskAssessmentStatus: 'complete',
+    contractStatus: 'complete',
+  },
+];
+
+export function getRiskAssessmentStatusStyle(status: RiskAssessmentStatus): { label: string; className: string } {
+  switch (status) {
+    case 'required':
+      return { label: 'Required', className: 'bg-red-100 text-red-700' };
+    case 'in_progress':
+      return { label: 'In Progress', className: 'bg-amber-100 text-amber-700' };
+    case 'awaiting_approval':
+      return { label: 'Awaiting Approval', className: 'bg-blue-100 text-blue-700' };
+    case 'complete':
+      return { label: 'Complete', className: 'bg-green-100 text-green-700' };
+  }
+}
+
+export function getContractStatusStyle(status: ContractStatus): { label: string; className: string } | null {
+  if (!status) return null;
+  switch (status) {
+    case 'preparation':
+      return { label: 'Preparation', className: 'bg-gray-100 text-gray-600' };
+    case 'rm_review':
+      return { label: 'RM Review', className: 'bg-amber-100 text-amber-700' };
+    case 'negotiation':
+      return { label: 'Negotiation', className: 'bg-orange-100 text-orange-700' };
+    case 'approval':
+      return { label: 'Approval', className: 'bg-blue-100 text-blue-700' };
+    case 'signing':
+      return { label: 'Signing', className: 'bg-purple-100 text-purple-700' };
+    case 'active':
+      return { label: 'Active', className: 'bg-green-100 text-green-700' };
+    case 'complete':
+      return { label: 'Complete', className: 'bg-green-200 text-green-800' };
+    default:
+      return null;
+  }
+}
+
 // ─── Risk level helpers ─────────────────────────────────────────────────────────
 
 export function getRiskLevelLabel(level: 1 | 2 | 3 | 4 | 5 | 6): string {

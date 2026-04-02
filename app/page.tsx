@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, HelpCircle, Flag, Grid3X3, User } from 'lucide-react';
+import { Search, HelpCircle, Flag, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -22,6 +22,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  OPPORTUNITY_ROWS,
+  getRiskAssessmentStatusStyle,
+  getContractStatusStyle,
+} from '@/lib/contract-data';
 
 // Mock data for tasks
 const TASKS = [
@@ -480,52 +485,53 @@ export default function DashboardPage() {
                       <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Reference</th>
                       <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Manager</th>
                       <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Client</th>
-                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pre-Engagement Status</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk Assessment Status</th>
                       <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { name: 'TD TR5938 Town and Country Decommission', ref: '123456ENG', manager: 'David Smith', client: 'TD Bank Group' },
-                      { name: 'EMD Millipore Corp - Confidentiality Agreement', ref: '193475ENG', manager: 'Susan Davies', client: 'Exelead a Merck Millipore Sigma Company' },
-                      { name: 'Renovation And Rehabilitation Services Of Embassy', ref: '173432ENG', manager: 'Kalp Patel', client: 'The Embassy of the State of Kuwait' },
-                      { name: 'Google Vizag E3 Sites Cost Management Services', ref: '323414ENG', manager: 'Jennifer Budge', client: 'Google India Private Limited' },
-                      { name: 'Project Management Services', ref: '223474ENG', manager: 'John Pilkington', client: 'CBRE GWS France SAS' },
-                      { name: 'TD TR5938 Town and Country Decommission', ref: '123456ENG', manager: 'David Smith', client: 'TD Bank Group' },
-                      { name: 'EMD Millipore Corp - Confidentiality Agreement', ref: '193475ENG', manager: 'Susan Davies', client: 'Exelead a Merck Millipore Sigma Company' },
-                      { name: 'Renovation And Rehabilitation Services Of Embassy', ref: '173432ENG', manager: 'Kalp Patel', client: 'The Embassy of the State of Kuwait' },
-                      { name: 'Google Vizag E3 Sites Cost Management Services', ref: '323414ENG', manager: 'Jennifer Budge', client: 'Google India Private Limited' },
-                      { name: 'Project Management Services', ref: '223474ENG', manager: 'John Pilkington', client: 'CBRE GWS France SAS' },
-                    ].map((row, i) => (
-                      <tr
-                        key={i}
-                        className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => router.push('/opportunity')}
-                      >
-                        <td className="px-5 py-3">
-                          <span className="text-[#4a90d9] hover:underline font-medium">{row.name}</span>
-                        </td>
-                        <td className="px-5 py-3 text-muted-foreground">{row.ref}</td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                              <User size={14} className="text-gray-500" />
+                    {OPPORTUNITY_ROWS.map((row) => {
+                      const raStyle = getRiskAssessmentStatusStyle(row.riskAssessmentStatus);
+                      const ctStyle = getContractStatusStyle(row.contractStatus);
+                      return (
+                        <tr
+                          key={row.id}
+                          className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                          onClick={() => router.push('/opportunity')}
+                        >
+                          <td className="px-5 py-3">
+                            <span className="text-[#4a90d9] hover:underline font-medium">{row.name}</span>
+                          </td>
+                          <td className="px-5 py-3 text-muted-foreground">{row.reference}</td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-bold text-gray-600">{row.managerInitials}</span>
+                              </div>
+                              <div>
+                                <div className="text-[#4a90d9] font-medium text-sm">{row.manager}</div>
+                                <div className="text-xs text-muted-foreground">Associate Director</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-[#4a90d9] font-medium text-sm">{row.manager}</div>
-                              <div className="text-xs text-muted-foreground">Associate Director</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-foreground">{row.client}</td>
-                        <td className="px-5 py-3">
-                          <span className="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-700 uppercase">Confirmed</span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className="px-2 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-700 uppercase">Reviewed</span>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-5 py-3 text-foreground">{row.client}</td>
+                          <td className="px-5 py-3">
+                            <span className={`px-2 py-1 text-xs font-semibold rounded uppercase whitespace-nowrap ${raStyle.className}`}>
+                              {raStyle.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3">
+                            {ctStyle ? (
+                              <span className={`px-2 py-1 text-xs font-semibold rounded uppercase whitespace-nowrap ${ctStyle.className}`}>
+                                {ctStyle.label}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">–</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
