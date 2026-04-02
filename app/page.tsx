@@ -254,9 +254,9 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('due-overdue');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-  
-  // Filter tasks based on current user's role
-  const TASKS = TASK_REGISTRY.filter(task => task.assignedTo === currentUser.role);
+
+  // Filter tasks to only those assigned to the current user's role
+  const userTasks = TASK_REGISTRY.filter(task => task.assignedTo === currentUser.role);
 
   // Form state for Create Opportunity
   const [opportunityName, setOpportunityName] = useState('');
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    Due and overdue ({TASKS.length})
+                    Due and overdue ({userTasks.length})
                   </button>
                   <button
                     onClick={() => setFilterStatus('completed')}
@@ -468,7 +468,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {TASKS.length === 0 && (
+                    {userTasks.length === 0 && (
                       <tr>
                         <td colSpan={5} className="px-4 py-12 text-center">
                           <div className="text-muted-foreground">
@@ -478,7 +478,7 @@ export default function DashboardPage() {
                         </td>
                       </tr>
                     )}
-                    {TASKS.map((task) => (
+                    {userTasks.map((task) => (
                       <tr
                         key={task.id}
                         className="border-b border-border hover:bg-muted/30 transition-colors"

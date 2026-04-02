@@ -72,6 +72,7 @@ export function getRoleDescription(role: UserRole): string {
 }
 
 // Permissions
+// Opportunity Manager: create/manage records and negotiate, but NOT review or approve
 export function canCreateOpportunity(role: UserRole): boolean {
   return role === 'opportunity_manager';
 }
@@ -80,20 +81,23 @@ export function canCreateContract(role: UserRole): boolean {
   return role === 'opportunity_manager';
 }
 
+export function canNegotiateContract(role: UserRole): boolean {
+  return role === 'opportunity_manager';
+}
+
+// Contract Reviewer (RM): can ONLY review contracts — not approve or sign
 export function canReviewContract(role: UserRole): boolean {
   return role === 'contract_reviewer';
 }
 
+// Approver: can ONLY approve contracts — not review or sign
 export function canApproveContract(role: UserRole): boolean {
   return role === 'approver';
 }
 
+// Authorised Signatory: can ONLY sign contracts
 export function canSignContract(role: UserRole): boolean {
   return role === 'authorised_signatory';
-}
-
-export function canNegotiateContract(role: UserRole): boolean {
-  return role === 'opportunity_manager';
 }
 
 export function canSeeTask(role: UserRole, taskType: string): boolean {

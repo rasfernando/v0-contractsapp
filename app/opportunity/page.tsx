@@ -1340,4 +1340,6 @@ function OpportunityPageWrapper() {
   );
 }
 
-export default OpportunityPageWrapper;
+export default function OpportunityPage() {
+  return <OpportunityPageWrapper />;
+}
