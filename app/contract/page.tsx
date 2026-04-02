@@ -117,6 +117,7 @@ export default function ContractPage() {
   const [expandedClause, setExpandedClause] = useState<number | null>(1);
   const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
   const [reviewComplete, setReviewComplete] = useState(false);
+  const [isNegotiating, setIsNegotiating] = useState(false);
 
   const handleStartReview = () => {
     setIsReviewing(true);
@@ -129,10 +130,17 @@ export default function ContractPage() {
   };
 
   const handleReviewComplete = () => {
-    // Move to next stage
-    setActiveTab('Overview');
+    setIsNegotiating(true);
     setReviewComplete(false);
   };
+
+  const handleSubmitForApproval = () => {
+    // Move to approval stage - for now just show alert
+    alert('Contract submitted for approval');
+  };
+
+  // Compute current pipeline stage
+  const currentStage = isNegotiating ? 'negotiation' : (reviewComplete || isReviewing) ? 'rm_review' : 'rm_review';
 
   // Document Review View
   if (isReviewing && activeTab === 'Review') {
@@ -359,19 +367,24 @@ export default function ContractPage() {
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Pipeline */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {PIPELINE_STAGES.map((stage, i) => (
-                <div key={stage.id} className="flex items-center gap-1.5">
-                  <button className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
-                    stage.done   ? 'bg-green-600 text-white' :
-                    stage.active ? 'bg-[#4a90d9] text-white' :
-                    'bg-gray-200 text-gray-500'
-                  }`}>
-                    {stage.active && <span className="mr-1">6</span>}
-                    {stage.label}
-                  </button>
-                  {i < PIPELINE_STAGES.length - 1 && <span className="text-gray-400 text-xs font-bold">&gt;</span>}
-                </div>
-              ))}
+              {PIPELINE_STAGES.map((stage, i) => {
+                const stageIndex = PIPELINE_STAGES.findIndex(s => s.id === stage.id);
+                const currentIndex = PIPELINE_STAGES.findIndex(s => s.id === currentStage);
+                const isDone = stageIndex < currentIndex;
+                const isActive = stage.id === currentStage;
+                return (
+                  <div key={stage.id} className="flex items-center gap-1.5">
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+                      isDone   ? 'bg-green-600 text-white' :
+                      isActive ? 'bg-[#4a90d9] text-white' :
+                      'bg-gray-200 text-gray-500'
+                    }`}>
+                      {stage.label}
+                    </span>
+                    {i < PIPELINE_STAGES.length - 1 && <span className="text-gray-400 text-xs font-bold">&gt;</span>}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Mark as Reviewed header */}
@@ -521,6 +534,229 @@ export default function ContractPage() {
             </div>
             <div className="text-[10px]">Terms and Conditions</div>
           </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Negotiation View (after Review Complete is clicked)
+  if (isNegotiating) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background font-sans">
+        {/* Header */}
+        <header className="bg-[#1e2a5e] text-white">
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <button className="p-1.5 hover:bg-white/10 rounded"><Grid3X3 size={18} /></button>
+              <button className="p-1.5 hover:bg-white/10 rounded">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </button>
+              <div className="flex items-center gap-1.5">
+                <div className="w-7 h-7 rounded-full bg-blue-400 flex items-center justify-center"><span className="text-xs font-bold">H</span></div>
+                <span className="text-sm font-semibold tracking-widest">HIVE</span>
+              </div>
+              <span className="text-white/50 text-sm">Contracts App</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-white/80">Hi [User first name]</span>
+              <button className="p-1.5 hover:bg-white/10 rounded">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </button>
+              <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
+              <span className="text-sm">Support</span>
+            </div>
+          </div>
+          <div className="flex gap-0 border-t border-white/10 px-4">
+            {['Overview', 'Documents', 'History'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setIsNegotiating(false); }}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === tab ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white/90'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Main content - Negotiation View */}
+        <main className="flex-1 p-6 bg-gray-50">
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* Pipeline */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {PIPELINE_STAGES.map((stage, i) => {
+                const stageIndex = PIPELINE_STAGES.findIndex(s => s.id === stage.id);
+                const negotiationIndex = PIPELINE_STAGES.findIndex(s => s.id === 'negotiation');
+                const isDone = stageIndex < negotiationIndex;
+                const isActive = stage.id === 'negotiation';
+                return (
+                  <div key={stage.id} className="flex items-center gap-1.5">
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+                      isDone   ? 'bg-green-600 text-white' :
+                      isActive ? 'bg-[#4a90d9] text-white' :
+                      'bg-gray-200 text-gray-500'
+                    }`}>
+                      {stage.label}
+                    </span>
+                    {i < PIPELINE_STAGES.length - 1 && <span className="text-gray-400 text-xs font-bold">&gt;</span>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mark as Negotiated header */}
+            <Card className="bg-white border border-border p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Mark as Negotiated</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Next action: The contract is being negotiated with the client by <span className="text-[#4a90d9]">John Doe</span>. Upload any new versions of the contract for re-review or approval.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50 whitespace-nowrap">
+                    Upload New Contract Version
+                  </Button>
+                  <Button onClick={handleSubmitForApproval} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
+                    Submit for Approval
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            <div className="grid grid-cols-3 gap-6">
+              {/* Left column - Risk Summary & Risk Review */}
+              <div className="space-y-4">
+                <Card className="bg-white border border-border p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk Summary</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">OVERALL RISK</div>
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-700">MEDIUM</span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-2">GUARDRAILS TRIGGERED</div>
+                      <ul className="text-xs text-foreground space-y-1">
+                        <li>• LIABILITY CAP ABOVE STANDARD LEVEL</li>
+                        <li>• INDEMNITY WORDING BROADER THAN TEMPLATE</li>
+                        <li>• EXTENDED LIMITATION PERIOD</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-2">RED/AMBER GUARDRAILS</div>
+                      <ul className="text-xs text-foreground space-y-1">
+                        <li>• 1 RED – LIABILITY CAP INCREASED TO £10M (STANDARD £5M)</li>
+                        <li>• 2 AMBER – CLIENT INDEMNITY NOT MUTUAL; LIMITATION PERIOD EXTENDED FROM 6 TO 12 YEARS</li>
+                      </ul>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="bg-white border border-border p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk Review</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    This opportunity is assessed as <span className="font-semibold text-foreground">medium</span> risk. Scope is clearly non-principal with the client holding all supply chain contracts, and jurisdiction/client track record are standard. The main concerns are below-target margin and a long programme duration, so the bid is acceptable with DOA approval on margin and active monitoring of scope and resourcing.
+                  </p>
+                  <div className="mt-4 text-right">
+                    <button className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide">Edit</button>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Right column - Review/Details tabs */}
+              <div className="col-span-2">
+                <Card className="bg-white border border-border">
+                  <div className="p-4 border-b border-border flex items-center justify-between">
+                    <div className="flex gap-6">
+                      <button className="text-sm font-semibold text-foreground">REVIEW</button>
+                      <button className="text-sm font-semibold text-muted-foreground">DETAILS</button>
+                    </div>
+                    <Button className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white text-sm">
+                      View Contract
+                    </Button>
+                  </div>
+                  <div className="px-5 flex gap-6 border-b border-border">
+                    <button
+                      onClick={() => setReviewSubTab('details')}
+                      className={`pb-2.5 pt-3 text-sm transition-colors ${reviewSubTab === 'details' ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium' : 'text-muted-foreground'}`}
+                    >
+                      Contract details
+                    </button>
+                    <button
+                      onClick={() => setReviewSubTab('guardrails')}
+                      className={`pb-2.5 pt-3 text-sm transition-colors ${reviewSubTab === 'guardrails' ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium' : 'text-muted-foreground'}`}
+                    >
+                      Guardrails &amp; Mitigations
+                    </button>
+                  </div>
+
+                  {/* Guardrails accordion */}
+                  <div className="divide-y divide-border">
+                    {FLAGGED_CLAUSES.map(clause => (
+                      <div key={clause.id} className="px-5">
+                        <button
+                          onClick={() => setExpandedClause(expandedClause === clause.id ? null : clause.id)}
+                          className="w-full flex items-center justify-between py-4"
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChevronDown size={16} className={`text-muted-foreground transition-transform ${expandedClause === clause.id ? 'rotate-180' : ''}`} />
+                            <span className="text-sm font-medium text-foreground">{clause.title}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                            clause.risk === 'VERY HIGH' || clause.risk === 'UNACCEPTABLE' ? 'bg-red-100 text-red-700' :
+                            clause.risk === 'HIGH' ? 'bg-yellow-100 text-yellow-700' :
+                            clause.risk === 'MEDIUM' ? 'bg-gray-100 text-gray-600' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {clause.risk}
+                          </span>
+                        </button>
+                        {expandedClause === clause.id && (
+                          <div className="pb-5 pl-6 space-y-4">
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Clause Type</div>
+                              <p className="text-sm text-muted-foreground">{clause.clauseType}</p>
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Flagged Clause</div>
+                              <p className="text-sm text-muted-foreground italic">{clause.flaggedClause}</p>
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Amendments</div>
+                              <p className="text-sm text-muted-foreground">{clause.amendments}</p>
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Mitigation</div>
+                              <p className="text-sm text-muted-foreground">
+                                We have agreed a higher PI cap of £10m (standard £5m) but confirmed with Insurance that cover is available on existing terms. The higher cap is limited to this project only and excludes consequential loss and indirect damages. Fee levels have been uplifted to reflect the additional exposure, and this position will be reviewed at each annual renewal.
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <button className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide">Edit Mitigation</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-[#1e2a5e] text-white px-4 py-3">
+          <div className="flex items-center gap-4 text-[10px] uppercase tracking-wide">
+            <a href="#" className="text-[#4a90d9]">Terms &amp; Conditions</a>
+            <span className="text-white/40">|</span>
+            <a href="#" className="text-[#4a90d9]">Privacy Policy</a>
+            <span className="text-white/40">|</span>
+            <a href="#" className="text-[#4a90d9]">Cookies Policy</a>
+          </div>
+          <div className="text-[10px]">Terms and Conditions</div>
         </footer>
       </div>
     );
