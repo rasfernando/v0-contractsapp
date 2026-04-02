@@ -497,7 +497,7 @@ export default function DashboardPage() {
                         <tr
                           key={row.id}
                           className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                          onClick={() => router.push('/opportunity')}
+                          onClick={() => router.push(`/opportunity?id=${row.id}`)}
                         >
                           <td className="px-5 py-3">
                             <span className="text-[#4a90d9] hover:underline font-medium">{row.name}</span>

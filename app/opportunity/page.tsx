@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { HelpCircle, Grid3X3, ExternalLink, MapPin, Users, Check, ChevronRight, Search, Upload, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  getOpportunityById,
+  OPPORTUNITY_ROWS,
+  getRiskAssessmentStatusStyle,
+  getContractStatusStyle,
+} from '@/lib/contract-data';
+import type { OpportunityRow, OpportunityRiskAssessment, OpportunityContract } from '@/lib/contract-data';
 
 // ─── Risk Assessment multi-step sheet ──────────────────────────────────────
 
@@ -856,19 +863,38 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
 
 // ─── Opportunity Page ───────────────────────────────────────────────────────
 
-export default function OpportunityPage() {
+function OpportunityPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const opportunityId = searchParams.get('id') || 'OPP-001';
+  
   const [isRiskSheetOpen, setIsRiskSheetOpen] = useState(false);
   const [isContractSheetOpen, setIsContractSheetOpen] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(true);
-  const [riskAssessments, setRiskAssessments] = useState<{ id: number; name: string; date: string; status: string }[]>([]);
-  const [contracts, setContracts] = useState<{ id: number; name: string; date: string; status: string }[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Get the opportunity data
+  const opportunity = getOpportunityById(opportunityId) || OPPORTUNITY_ROWS[0];
+  const [riskAssessments, setRiskAssessments] = useState<OpportunityRiskAssessment[]>(opportunity.riskAssessments);
+  const [contracts, setContracts] = useState<OpportunityContract[]>(opportunity.contracts);
+  
+  // Update data when opportunity changes
+  useEffect(() => {
+    setRiskAssessments(opportunity.riskAssessments);
+    setContracts(opportunity.contracts);
+  }, [opportunity]);
 
   // Hide success message after 5 seconds
   useEffect(() => {
-    const timer = setTimeout(() => setShowSuccess(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (showSuccess) {
+      const timer = setTimeout(() => setShowSuccess(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess]);
+  
+  // Determine next step based on risk assessment status
+  const needsRiskAssessment = opportunity.riskAssessmentStatus === 'required' || opportunity.riskAssessmentStatus === 'in_progress';
+  const riskAwaitingApproval = opportunity.riskAssessmentStatus === 'awaiting_approval';
+  const riskComplete = opportunity.riskAssessmentStatus === 'complete';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -904,8 +930,8 @@ export default function OpportunityPage() {
 
           {/* Title section */}
           <div>
-            <h1 className="text-2xl font-semibold mb-1">HSBC</h1>
-            <p className="text-white/70 text-sm">1 LOMBARD STREET · LONDON</p>
+            <h1 className="text-2xl font-semibold mb-1">{opportunity.client}</h1>
+            <p className="text-white/70 text-sm">{opportunity.address.toUpperCase()} · {opportunity.city.toUpperCase()}</p>
           </div>
         </div>
       </header>
@@ -932,25 +958,44 @@ export default function OpportunityPage() {
       {/* Main Content */}
       <div className="flex-1 px-4 py-6">
         {/* Next Step Section */}
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-foreground mb-2">Next step: Complete a Risk Assessment</h2>
+        <Card className={`border p-6 mb-6 ${
+          needsRiskAssessment ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200' :
+          riskAwaitingApproval ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200' :
+          'bg-gradient-to-r from-green-50 to-green-100 border-green-200'
+        }`}>
+          <h2 className="text-lg font-semibold text-foreground mb-2">
+            {needsRiskAssessment ? 'Next step: Complete a Risk Assessment' :
+             riskAwaitingApproval ? 'Risk Assessment Awaiting Approval' :
+             riskComplete && contracts.length === 0 ? 'Next step: Create a Contract' :
+             'Opportunity In Progress'}
+          </h2>
           <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-            A risk assessment is required on this opportunity before assigning contracts. You can create and manage your contracts here, but a risk assessment must be completed to progress the opportunity. It is a 1 to 1 relationship.
+            {needsRiskAssessment ? 
+              'A risk assessment is required on this opportunity before assigning contracts. You can create and manage your contracts here, but a risk assessment must be completed to progress the opportunity.' :
+             riskAwaitingApproval ?
+              'The risk assessment for this opportunity is awaiting approval. Once approved, you can proceed with contract creation.' :
+             riskComplete && contracts.length === 0 ?
+              'The risk assessment is complete. You can now create contracts for this opportunity.' :
+              `This opportunity has ${riskAssessments.length} risk assessment(s) and ${contracts.length} contract(s) associated with it.`}
           </p>
           <div className="flex gap-3">
-            <Button
-              onClick={() => setIsRiskSheetOpen(true)}
-              className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
-            >
-              Create a Risk
-            </Button>
-            <Button
-              onClick={() => setIsContractSheetOpen(true)}
-              variant="outline"
-              className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50"
-            >
-              Create a Contract
-            </Button>
+            {needsRiskAssessment && (
+              <Button
+                onClick={() => setIsRiskSheetOpen(true)}
+                className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
+              >
+                {riskAssessments.length === 0 ? 'Create a Risk Assessment' : 'Continue Risk Assessment'}
+              </Button>
+            )}
+            {riskComplete && (
+              <Button
+                onClick={() => setIsContractSheetOpen(true)}
+                className={needsRiskAssessment ? 'border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50' : 'bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium'}
+                variant={needsRiskAssessment ? 'outline' : 'default'}
+              >
+                Create a Contract
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -969,18 +1014,15 @@ export default function OpportunityPage() {
                   Client
                 </h4>
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <div className="text-center">
-                      <div className="text-red-600 font-bold text-xl leading-none">H</div>
-                      <div className="text-red-600 font-bold text-xl leading-none">S</div>
-                    </div>
+                  <div className="w-12 h-12 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-blue-700 font-bold text-sm">{opportunity.clientInitials}</span>
                   </div>
                   <div className="flex-1">
-                    <div className="font-semibold text-foreground">HSBC</div>
+                    <div className="font-semibold text-foreground">{opportunity.client}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      <div>123 Lombard Road</div>
-                      <div>London</div>
-                      <div>UK</div>
+                      <div>{opportunity.address}</div>
+                      <div>{opportunity.city}</div>
+                      <div>{opportunity.country}</div>
                     </div>
                     <a href="#" className="text-xs text-[#4a90d9] hover:underline mt-2 inline-flex items-center gap-1">
                       VIEW WEBSITE
@@ -993,31 +1035,31 @@ export default function OpportunityPage() {
               {/* Contact Info */}
               <div className="space-y-2 text-sm">
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase font-semibold">Client</div>
-                  <div className="text-foreground">HSBC</div>
+                  <div className="text-xs text-muted-foreground uppercase font-semibold">Reference</div>
+                  <div className="text-foreground">{opportunity.reference}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase font-semibold">Address</div>
-                  <div className="text-foreground">1 LOMBARD STREET</div>
+                  <div className="text-xs text-muted-foreground uppercase font-semibold">Opportunity</div>
+                  <div className="text-foreground">{opportunity.name}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase font-semibold">City</div>
-                  <div className="text-foreground">LONDON</div>
+                  <div className="text-xs text-muted-foreground uppercase font-semibold">Location</div>
+                  <div className="text-foreground">{opportunity.city}, {opportunity.country}</div>
                 </div>
               </div>
 
               {/* Director */}
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                  Director
+                  Opportunity Director
                 </h4>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold">MW</span>
+                    <span className="text-xs font-bold">{opportunity.directorInitials}</span>
                   </div>
                   <div>
-                    <div className="font-semibold text-[#4a90d9]">Mary Watkins</div>
-                    <div className="text-xs text-muted-foreground">London</div>
+                    <div className="font-semibold text-[#4a90d9]">{opportunity.director}</div>
+                    <div className="text-xs text-muted-foreground">{opportunity.city}</div>
                   </div>
                 </div>
               </div>
@@ -1029,11 +1071,11 @@ export default function OpportunityPage() {
                 </h4>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-300 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold">JD</span>
+                    <span className="text-xs font-bold">{opportunity.managerInitials}</span>
                   </div>
                   <div>
-                    <div className="font-semibold text-[#4a90d9]">John Douglas</div>
-                    <div className="text-xs text-muted-foreground">London</div>
+                    <div className="font-semibold text-[#4a90d9]">{opportunity.manager}</div>
+                    <div className="text-xs text-muted-foreground">{opportunity.city}</div>
                   </div>
                 </div>
               </div>
@@ -1071,15 +1113,20 @@ export default function OpportunityPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {riskAssessments.map(ra => (
-                    <div key={ra.id} className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors">
-                      <div>
-                        <div className="text-sm font-medium text-[#4a90d9] hover:underline cursor-pointer">{ra.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">Created {ra.date}</div>
+                  {riskAssessments.map(ra => {
+                    const statusStyle = getRiskAssessmentStatusStyle(ra.status);
+                    return (
+                      <div key={ra.id} className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors">
+                        <div>
+                          <div className="text-sm font-medium text-[#4a90d9] hover:underline cursor-pointer">{ra.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Created {ra.date} {ra.serviceType && `· ${ra.serviceType}`} {ra.riskScore !== undefined && `· Risk Score: ${ra.riskScore}`}
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusStyle.className}`}>{statusStyle.label}</span>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">{ra.status}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <Button
                     disabled
                     variant="outline"
@@ -1108,31 +1155,39 @@ export default function OpportunityPage() {
                       There are no contracts linked to this Engagement.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Use the button below to create a contract record.
+                      {riskComplete ? 'Use the button below to create a contract record.' : 'Complete the risk assessment first to create contracts.'}
                     </p>
                   </div>
                   <Button
                     onClick={() => setIsContractSheetOpen(true)}
-                    className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium"
+                    disabled={!riskComplete}
+                    className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white font-medium disabled:opacity-50"
                   >
                     Create a contract record
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {contracts.map(c => (
-                    <div
-                      key={c.id}
-                      onClick={() => router.push('/contract')}
-                      className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors cursor-pointer"
-                    >
-                      <div>
-                        <div className="text-sm font-medium text-[#4a90d9] hover:underline">{c.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">Created {c.date}</div>
+                  {contracts.map(c => {
+                    const statusStyle = getContractStatusStyle(c.status);
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => router.push('/contract')}
+                        className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        <div>
+                          <div className="text-sm font-medium text-[#4a90d9] hover:underline">{c.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Created {c.date} {c.contractType && `· ${c.contractType}`}
+                          </div>
+                        </div>
+                        {statusStyle && (
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusStyle.className}`}>{statusStyle.label}</span>
+                        )}
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">{c.status}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <Button
                     onClick={() => setIsContractSheetOpen(true)}
                     variant="outline"
@@ -1174,9 +1229,27 @@ export default function OpportunityPage() {
                     <td className="px-6 py-3 text-sm text-foreground">25/04/2026</td>
                     <td className="px-6 py-3 text-sm text-foreground">Opportunity Created</td>
                     <td className="px-6 py-3 text-sm text-[#4a90d9] hover:underline cursor-pointer">
-                      John Douglas
+                      {opportunity.manager}
                     </td>
                   </tr>
+                  {riskAssessments.map(ra => (
+                    <tr key={ra.id} className="border-b border-border hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3 text-sm text-foreground">{ra.date}</td>
+                      <td className="px-6 py-3 text-sm text-foreground">Risk Assessment Created: {ra.name}</td>
+                      <td className="px-6 py-3 text-sm text-[#4a90d9] hover:underline cursor-pointer">
+                        {opportunity.manager}
+                      </td>
+                    </tr>
+                  ))}
+                  {contracts.map(c => (
+                    <tr key={c.id} className="border-b border-border hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3 text-sm text-foreground">{c.date}</td>
+                      <td className="px-6 py-3 text-sm text-foreground">Contract Created: {c.name}</td>
+                      <td className="px-6 py-3 text-sm text-[#4a90d9] hover:underline cursor-pointer">
+                        {opportunity.manager}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -1216,12 +1289,15 @@ export default function OpportunityPage() {
         <RiskAssessmentSheet
           onClose={() => setIsRiskSheetOpen(false)}
           onComplete={() => {
-            setRiskAssessments(prev => [...prev, {
-              id: prev.length + 1,
-              name: `Risk Assessment ${prev.length + 1}`,
+            const newRA: OpportunityRiskAssessment = {
+              id: `RA-NEW-${Date.now()}`,
+              name: `${opportunity.name} Risk Assessment`,
               date: new Date().toLocaleDateString('en-GB'),
-              status: 'Pending Approval',
-            }]);
+              status: 'awaiting_approval',
+              serviceType: 'Project Management',
+            };
+            setRiskAssessments(prev => [...prev, newRA]);
+            setShowSuccess(true);
           }}
         />
       )}
@@ -1231,15 +1307,26 @@ export default function OpportunityPage() {
         <ContractCreateSheet
           onClose={() => setIsContractSheetOpen(false)}
           onComplete={() => {
-            setContracts(prev => [...prev, {
-              id: prev.length + 1,
-              name: `Contract Record ${prev.length + 1}`,
+            const newContract: OpportunityContract = {
+              id: `CR-NEW-${Date.now()}`,
+              name: `${opportunity.client} Contract`,
               date: new Date().toLocaleDateString('en-GB'),
-              status: 'Contract Preparation',
-            }]);
+              status: 'preparation',
+              contractType: 'Standalone',
+            };
+            setContracts(prev => [...prev, newContract]);
+            setShowSuccess(true);
           }}
         />
       )}
     </div>
+  );
+}
+
+export default function OpportunityPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground">Loading...</div></div>}>
+      <OpportunityPageContent />
+    </Suspense>
   );
 }

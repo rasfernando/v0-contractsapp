@@ -401,15 +401,40 @@ export const EXAMPLE_MSA_SUMMARY: MSAKeyDealSummary = {
 export type RiskAssessmentStatus = 'required' | 'in_progress' | 'awaiting_approval' | 'complete';
 export type ContractStatus = 'preparation' | 'rm_review' | 'negotiation' | 'approval' | 'signing' | 'active' | 'complete' | null;
 
+export interface OpportunityRiskAssessment {
+  id: string;
+  name: string;
+  date: string;
+  status: RiskAssessmentStatus;
+  riskScore?: number;
+  serviceType?: string;
+}
+
+export interface OpportunityContract {
+  id: string;
+  name: string;
+  date: string;
+  status: ContractStatus;
+  contractType?: string;
+}
+
 export interface OpportunityRow {
   id: string;
   name: string;
   reference: string;
   manager: string;
   managerInitials: string;
+  director: string;
+  directorInitials: string;
   client: string;
+  clientInitials: string;
+  address: string;
+  city: string;
+  country: string;
   riskAssessmentStatus: RiskAssessmentStatus;
   contractStatus: ContractStatus;
+  riskAssessments: OpportunityRiskAssessment[];
+  contracts: OpportunityContract[];
 }
 
 export const OPPORTUNITY_ROWS: OpportunityRow[] = [
@@ -419,9 +444,21 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: 'OPP-2024-1823456',
     manager: 'John Doe',
     managerInitials: 'JD',
+    director: 'Sarah Mitchell',
+    directorInitials: 'SM',
     client: 'Brookfield Properties Ltd',
+    clientInitials: 'BP',
+    address: '1 London Street',
+    city: 'London',
+    country: 'United Kingdom',
     riskAssessmentStatus: 'complete',
     contractStatus: 'rm_review',
+    riskAssessments: [
+      { id: 'RA-001', name: 'Pre-bid Risk Assessment', date: '15/10/2025', status: 'complete', riskScore: 45, serviceType: 'Project Management' },
+    ],
+    contracts: [
+      { id: 'CR-001', name: '1 London Street Standalone Contract V1', date: '20/10/2025', status: 'rm_review', contractType: 'Standalone' },
+    ],
   },
   {
     id: 'OPP-002',
@@ -429,9 +466,22 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '123456ENG',
     manager: 'David Smith',
     managerInitials: 'DS',
+    director: 'Mark Thompson',
+    directorInitials: 'MT',
     client: 'TD Bank Group',
+    clientInitials: 'TD',
+    address: '66 Wellington Street',
+    city: 'Toronto',
+    country: 'Canada',
     riskAssessmentStatus: 'complete',
     contractStatus: 'negotiation',
+    riskAssessments: [
+      { id: 'RA-002', name: 'Decommission Risk Assessment', date: '01/09/2025', status: 'complete', riskScore: 62, serviceType: 'Facilities Management' },
+    ],
+    contracts: [
+      { id: 'CR-002', name: 'TD Decommission Services Agreement', date: '05/09/2025', status: 'negotiation', contractType: 'MSA' },
+      { id: 'CR-003', name: 'TD Phase 1 Work Order', date: '10/09/2025', status: 'preparation', contractType: 'Work Order' },
+    ],
   },
   {
     id: 'OPP-003',
@@ -439,9 +489,19 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '193475ENG',
     manager: 'Susan Davies',
     managerInitials: 'SD',
+    director: 'Catherine Price',
+    directorInitials: 'CP',
     client: 'Exelead a Merck Millipore Sigma Company',
+    clientInitials: 'MS',
+    address: '400 Summit Drive',
+    city: 'Burlington',
+    country: 'United States',
     riskAssessmentStatus: 'awaiting_approval',
     contractStatus: null,
+    riskAssessments: [
+      { id: 'RA-003', name: 'Initial Risk Assessment', date: '28/03/2026', status: 'awaiting_approval', riskScore: 28, serviceType: 'Consulting' },
+    ],
+    contracts: [],
   },
   {
     id: 'OPP-004',
@@ -449,9 +509,19 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '173432ENG',
     manager: 'Kalp Patel',
     managerInitials: 'KP',
+    director: 'Ahmed Al-Rashid',
+    directorInitials: 'AR',
     client: 'The Embassy of the State of Kuwait',
+    clientInitials: 'KW',
+    address: '2 Albert Gate',
+    city: 'London',
+    country: 'United Kingdom',
     riskAssessmentStatus: 'in_progress',
     contractStatus: null,
+    riskAssessments: [
+      { id: 'RA-004', name: 'Embassy Renovation Risk Assessment', date: '01/04/2026', status: 'in_progress', serviceType: 'Construction Management' },
+    ],
+    contracts: [],
   },
   {
     id: 'OPP-005',
@@ -459,9 +529,21 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '323414ENG',
     manager: 'Jennifer Budge',
     managerInitials: 'JB',
+    director: 'Priya Sharma',
+    directorInitials: 'PS',
     client: 'Google India Private Limited',
+    clientInitials: 'G',
+    address: 'Hitech City',
+    city: 'Visakhapatnam',
+    country: 'India',
     riskAssessmentStatus: 'complete',
     contractStatus: 'approval',
+    riskAssessments: [
+      { id: 'RA-005', name: 'E3 Sites Risk Assessment', date: '15/02/2026', status: 'complete', riskScore: 35, serviceType: 'Cost Management' },
+    ],
+    contracts: [
+      { id: 'CR-005', name: 'Google E3 Cost Management Services Agreement', date: '20/02/2026', status: 'approval', contractType: 'MSA' },
+    ],
   },
   {
     id: 'OPP-006',
@@ -469,9 +551,21 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '223474ENG',
     manager: 'John Pilkington',
     managerInitials: 'JP',
+    director: 'Marie Dubois',
+    directorInitials: 'MD',
     client: 'CBRE GWS France SAS',
+    clientInitials: 'CB',
+    address: '145 Rue de Bercy',
+    city: 'Paris',
+    country: 'France',
     riskAssessmentStatus: 'complete',
     contractStatus: 'signing',
+    riskAssessments: [
+      { id: 'RA-006', name: 'Paris HQ Fit-Out Risk Assessment', date: '01/01/2026', status: 'complete', riskScore: 42, serviceType: 'Project Management' },
+    ],
+    contracts: [
+      { id: 'CR-006', name: 'CBRE Paris HQ Fit-Out Contract', date: '10/01/2026', status: 'signing', contractType: 'Standalone' },
+    ],
   },
   {
     id: 'OPP-007',
@@ -479,9 +573,17 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '334512ENG',
     manager: 'Rachel Morris',
     managerInitials: 'RM',
+    director: 'James Wilson',
+    directorInitials: 'JW',
     client: 'Aviva Investors',
+    clientInitials: 'AV',
+    address: '1 Poultry',
+    city: 'London',
+    country: 'United Kingdom',
     riskAssessmentStatus: 'required',
     contractStatus: null,
+    riskAssessments: [],
+    contracts: [],
   },
   {
     id: 'OPP-008',
@@ -489,9 +591,23 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '445623ENG',
     manager: 'Omar Hassan',
     managerInitials: 'OH',
+    director: 'Richard Chen',
+    directorInitials: 'RC',
     client: 'HSBC Holdings plc',
+    clientInitials: 'HS',
+    address: '8 Canada Square',
+    city: 'London',
+    country: 'United Kingdom',
     riskAssessmentStatus: 'complete',
     contractStatus: 'active',
+    riskAssessments: [
+      { id: 'RA-008', name: 'Data Centre Risk Assessment', date: '15/06/2025', status: 'complete', riskScore: 55, serviceType: 'Technical Services' },
+    ],
+    contracts: [
+      { id: 'CR-008', name: 'HSBC Data Centre Resilience MSA', date: '01/07/2025', status: 'active', contractType: 'MSA' },
+      { id: 'CR-009', name: 'Phase 1 Work Order - London', date: '15/07/2025', status: 'active', contractType: 'Work Order' },
+      { id: 'CR-010', name: 'Phase 2 Work Order - Birmingham', date: '01/09/2025', status: 'active', contractType: 'Work Order' },
+    ],
   },
   {
     id: 'OPP-009',
@@ -499,9 +615,19 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '556734ENG',
     manager: 'Claire Sutton',
     managerInitials: 'CS',
+    director: 'Andrew MacLeod',
+    directorInitials: 'AM',
     client: 'Lendlease Europe',
+    clientInitials: 'LL',
+    address: 'Ocean Terminal',
+    city: 'Edinburgh',
+    country: 'United Kingdom',
     riskAssessmentStatus: 'in_progress',
     contractStatus: null,
+    riskAssessments: [
+      { id: 'RA-009', name: 'Waterfront Development Risk Assessment', date: '25/03/2026', status: 'in_progress', serviceType: 'Development Management' },
+    ],
+    contracts: [],
   },
   {
     id: 'OPP-010',
@@ -509,11 +635,27 @@ export const OPPORTUNITY_ROWS: OpportunityRow[] = [
     reference: '667845ENG',
     manager: 'Peter Walsh',
     managerInitials: 'PW',
+    director: 'Helen Brooks',
+    directorInitials: 'HB',
     client: 'Transport for London',
+    clientInitials: 'TfL',
+    address: '55 Broadway',
+    city: 'London',
+    country: 'United Kingdom',
     riskAssessmentStatus: 'complete',
     contractStatus: 'complete',
+    riskAssessments: [
+      { id: 'RA-010', name: 'Crossrail Station Risk Assessment', date: '01/03/2024', status: 'complete', riskScore: 72, serviceType: 'Construction Management' },
+    ],
+    contracts: [
+      { id: 'CR-011', name: 'Crossrail Station Fit-Out Contract', date: '15/03/2024', status: 'complete', contractType: 'Standalone' },
+    ],
   },
 ];
+
+export function getOpportunityById(id: string): OpportunityRow | undefined {
+  return OPPORTUNITY_ROWS.find(opp => opp.id === id);
+}
 
 export function getRiskAssessmentStatusStyle(status: RiskAssessmentStatus): { label: string; className: string } {
   switch (status) {
