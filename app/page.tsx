@@ -1,4 +1,3 @@
-// v2.0 - fixed TASKS -> userTasks
 'use client';
 
 import { useState } from 'react';
@@ -28,10 +27,9 @@ import {
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
 } from '@/lib/contract-data';
-import { useUser, canSeeTask, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
+import { useUser, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
 import { UserSwitcher } from '@/components/user-switcher';
 
-// Tasks based on existing opportunities - each task is assigned to a specific role
 const TASK_REGISTRY = [
   {
     id: 1,
@@ -173,7 +171,6 @@ const TASK_REGISTRY = [
     opportunityId: 'OPP-010',
     assignedTo: 'authorised_signatory',
   },
-  // Additional tasks for Contract Reviewer
   {
     id: 11,
     name: 'Review MSA Terms',
@@ -202,7 +199,6 @@ const TASK_REGISTRY = [
     opportunityId: 'OPP-012',
     assignedTo: 'contract_reviewer',
   },
-  // Additional tasks for Approver
   {
     id: 13,
     name: 'Approve High-Value Contract',
@@ -231,7 +227,6 @@ const TASK_REGISTRY = [
     opportunityId: 'OPP-014',
     assignedTo: 'approver',
   },
-  // Additional tasks for Authorised Signatory
   {
     id: 15,
     name: 'Execute Framework Agreement',
@@ -256,10 +251,8 @@ export default function DashboardPage() {
   const [filterStatus, setFilterStatus] = useState('due-overdue');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
-  // Filter tasks to only those assigned to the current user's role
   const userTasks = TASK_REGISTRY.filter(task => task.assignedTo === currentUser.role);
 
-  // Form state for Create Opportunity
   const [opportunityName, setOpportunityName] = useState('');
   const [country, setCountry] = useState('');
   const [costCentre, setCostCentre] = useState('');
@@ -273,14 +266,9 @@ export default function DashboardPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'text-red-600';
-      case 'medium':
-        return 'text-amber-600';
-      case 'low':
-        return 'text-muted-foreground';
-      default:
-        return 'text-muted-foreground';
+      case 'high': return 'text-red-600';
+      case 'medium': return 'text-amber-600';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -295,19 +283,8 @@ export default function DashboardPage() {
   };
 
   const handleCreateRecord = () => {
-    // Handle form submission
-    console.log('Creating record:', {
-      opportunityName,
-      country,
-      costCentre,
-      organisationLocation,
-      client,
-      opportunityDirector,
-      opportunityManager,
-    });
     resetForm();
     setIsCreateSheetOpen(false);
-    // Navigate to opportunity page
     router.push('/opportunity');
   };
 
@@ -316,7 +293,6 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="bg-gradient-to-r from-[#1e2a5e] to-[#3d4eaa] text-white">
         <div className="px-4 py-3">
-          {/* Top nav */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <button className="p-1.5 hover:bg-white/10 rounded transition-colors">
@@ -340,7 +316,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Title section */}
           <div className="flex items-start justify-between pb-4">
             <div>
               <h1 className="text-2xl font-semibold mb-1">Contracts app</h1>
@@ -392,7 +367,6 @@ export default function DashboardPage() {
       <div className="flex-1 px-4 py-6">
         {activeTab === 'tasks' && (
           <div className="space-y-6">
-            {/* Section Title */}
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-1">Tasks assigned to you</h2>
               <p className="text-sm text-muted-foreground">
@@ -400,17 +374,12 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Task Registry */}
             <Card className="border border-border bg-white shadow-sm">
               <div className="px-4 py-3 border-b border-border">
-                <h3 className="text-xs font-semibold text-foreground tracking-wider uppercase">
-                  Task Registry
-                </h3>
+                <h3 className="text-xs font-semibold text-foreground tracking-wider uppercase">Task Registry</h3>
               </div>
 
-              {/* Filters */}
               <div className="px-4 py-3 border-b border-border">
-                {/* Status Filter Tabs */}
                 <div className="flex gap-4 mb-3">
                   <button
                     onClick={() => setFilterStatus('due-overdue')}
@@ -433,8 +402,6 @@ export default function DashboardPage() {
                     Completed tasks (2)
                   </button>
                 </div>
-
-                {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -446,26 +413,15 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
-                        Task
-                      </th>
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
-                        Client/Contract
-                      </th>
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
-                        Due Date
-                      </th>
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
-                        Status
-                      </th>
-                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
-                        Flag
-                      </th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">Task</th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">Client/Contract</th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">Due Date</th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">Status</th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">Flag</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -480,10 +436,7 @@ export default function DashboardPage() {
                       </tr>
                     )}
                     {userTasks.map((task) => (
-                      <tr
-                        key={task.id}
-                        className="border-b border-border hover:bg-muted/30 transition-colors"
-                      >
+                      <tr key={task.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 text-sm">
                           <div className="space-y-0.5">
                             <div className="font-medium text-[#3d4eaa]">{task.name}</div>
@@ -493,22 +446,16 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {task.client && (
-                            <span className="text-[#3d4eaa] hover:underline cursor-pointer">
-                              {task.client}
-                            </span>
+                            <span className="text-[#3d4eaa] hover:underline cursor-pointer">{task.client}</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <div className="text-muted-foreground">{task.dueDate}</div>
-                          <div className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                            {task.relativeDate}
-                          </div>
+                          <div className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>{task.relativeDate}</div>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <div className="text-muted-foreground">{task.status}</div>
-                          <span className="text-xs text-[#3d4eaa] hover:underline cursor-pointer">
-                            {task.workspaceLink}
-                          </span>
+                          <span className="text-xs text-[#3d4eaa] hover:underline cursor-pointer">{task.workspaceLink}</span>
                         </td>
                         <td className="px-4 py-3">
                           <button className="text-muted-foreground hover:text-foreground transition-colors">
@@ -521,7 +468,6 @@ export default function DashboardPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               <div className="px-4 py-3 border-t border-border flex items-center justify-end gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <span>Items per page:</span>
@@ -536,7 +482,7 @@ export default function DashboardPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <span>Page [#] of [#]</span>
+                <span>Page 1 of 1</span>
                 <div className="flex gap-1">
                   <button className="p-1.5 hover:bg-muted rounded transition-colors">&lt;</button>
                   <button className="p-1.5 hover:bg-muted rounded transition-colors">&gt;</button>
@@ -557,7 +503,6 @@ export default function DashboardPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opportunity Records</p>
               </div>
 
-              {/* Search */}
               <div className="px-5 pb-3">
                 <div className="relative max-w-xs">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -569,7 +514,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Tab Filters */}
               <div className="px-5 flex items-center gap-6 border-b border-border">
                 {['Current', 'Complete', 'View only'].map((f, i) => (
                   <button
@@ -585,7 +529,6 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -645,7 +588,6 @@ export default function DashboardPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               <div className="px-5 py-3 flex items-center justify-end gap-4 border-t border-border text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <span>Items per page:</span>
@@ -670,19 +612,13 @@ export default function DashboardPage() {
       <footer className="border-t border-border bg-[#1e2a5e] text-white mt-auto">
         <div className="px-4 py-4 text-xs text-white/60 space-y-1">
           <div className="flex gap-3">
-            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
-              Terms & Conditions
-            </a>
+            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Terms &amp; Conditions</a>
             <span>|</span>
-            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
-              Privacy Policy
-            </a>
+            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Privacy Policy</a>
             <span>|</span>
-            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">
-              Cookies Policy
-            </a>
+            <a href="#" className="hover:text-white transition-colors uppercase text-[10px] tracking-wide">Cookies Policy</a>
           </div>
-          <div className="text-[10px]">All rights reserved. Turner & Townsend © 2025</div>
+          <div className="text-[10px]">All rights reserved. Turner &amp; Townsend &copy; 2025</div>
         </div>
       </footer>
 
@@ -693,13 +629,11 @@ export default function DashboardPage() {
             <SheetTitle className="text-xl font-semibold">Create Opportunity record</SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground leading-relaxed">
               Use this form to set up a new opportunity record for your engagement. Enter the client
-              location, country and cost centre then search and add the director and opportunity
-              manager.
+              location, country and cost centre then search and add the director and opportunity manager.
             </SheetDescription>
           </SheetHeader>
 
           <div className="space-y-6 px-4 pb-4">
-            {/* Opportunity Name */}
             <div className="space-y-2">
               <Label htmlFor="opportunityName">Opportunity name*</Label>
               <Input
@@ -709,12 +643,9 @@ export default function DashboardPage() {
                 placeholder=""
                 className="bg-white"
               />
-              <p className="text-xs text-muted-foreground">
-                Must be a unique name and not previously used on other engagements
-              </p>
+              <p className="text-xs text-muted-foreground">Must be a unique name and not previously used on other engagements</p>
             </div>
 
-            {/* Country */}
             <div className="space-y-2">
               <Label>Country*</Label>
               <Select value={country} onValueChange={setCountry}>
@@ -731,7 +662,6 @@ export default function DashboardPage() {
               </Select>
             </div>
 
-            {/* Cost Centre */}
             <div className="space-y-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -744,13 +674,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* CLIENT Section */}
             <div className="space-y-4">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Client
-              </h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Client</h4>
 
-              {/* Organisation Location */}
               <div className="space-y-2">
                 <Label htmlFor="organisationLocation">Organisation location*</Label>
                 <Input
@@ -760,12 +686,9 @@ export default function DashboardPage() {
                   placeholder=""
                   className="bg-white"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Select the location of the organisation
-                </p>
+                <p className="text-xs text-muted-foreground">Select the location of the organisation</p>
               </div>
 
-              {/* Client Search */}
               <div className="space-y-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -776,18 +699,12 @@ export default function DashboardPage() {
                     className="pl-9 bg-white"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  You can search for organisations registered to the selected country by their legal
-                  name or ID
-                </p>
+                <p className="text-xs text-muted-foreground">You can search for organisations registered to the selected country by their legal name or ID</p>
               </div>
             </div>
 
-            {/* OPPORTUNITY DIRECTOR Section */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Opportunity Director
-              </h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Opportunity Director</h4>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -799,11 +716,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* OPPORTUNITY MANAGER Section */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Opportunity Manager
-              </h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Opportunity Manager</h4>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -820,10 +734,7 @@ export default function DashboardPage() {
             <div className="flex gap-3 w-full">
               <Button
                 variant="outline"
-                onClick={() => {
-                  resetForm();
-                  setIsCreateSheetOpen(false);
-                }}
+                onClick={() => { resetForm(); setIsCreateSheetOpen(false); }}
                 className="flex-1 border-[#3d4eaa] text-[#3d4eaa] hover:bg-[#3d4eaa]/10"
               >
                 Cancel
