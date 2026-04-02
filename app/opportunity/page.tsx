@@ -1323,10 +1323,12 @@ function OpportunityPageContent() {
   );
 }
 
-export default function OpportunityPage() {
+function OpportunityPageWrapper() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground">Loading...</div></div>}>
       <OpportunityPageContent />
     </Suspense>
   );
 }
+
+export default OpportunityPageWrapper;
