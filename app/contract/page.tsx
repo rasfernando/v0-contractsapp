@@ -118,6 +118,10 @@ export default function ContractPage() {
   const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
   const [reviewComplete, setReviewComplete] = useState(false);
   const [isNegotiating, setIsNegotiating] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadStep, setUploadStep] = useState<'upload' | 'action'>('upload');
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [nextAction, setNextAction] = useState<'approval' | 're-review' | 'no-action' | null>(null);
 
   const handleStartReview = () => {
     setIsReviewing(true);
@@ -139,10 +143,45 @@ export default function ContractPage() {
     alert('Contract submitted for approval');
   };
 
+  const handleOpenUploadModal = () => {
+    setShowUploadModal(true);
+    setUploadStep('upload');
+    setUploadedFileName('');
+    setNextAction(null);
+  };
+
+  const handleCloseUploadModal = () => {
+    setShowUploadModal(false);
+    setUploadStep('upload');
+    setUploadedFileName('');
+    setNextAction(null);
+  };
+
+  const handleUploadNext = () => {
+    if (uploadedFileName) {
+      setUploadStep('action');
+    }
+  };
+
+  const handleAddVersion = () => {
+    // Process the upload
+    if (nextAction === 'approval') {
+      // Contract ready for approval - move to approval stage
+      setIsNegotiating(false);
+      setActiveTab('Overview');
+    } else if (nextAction === 're-review') {
+      // Start review process again
+      setIsReviewing(true);
+      setActiveTab('Review');
+    }
+    // else: no action - just close modal
+    handleCloseUploadModal();
+  };
+
   // Compute current pipeline stage
   const currentStage = isNegotiating ? 'negotiation' : (reviewComplete || isReviewing) ? 'rm_review' : 'rm_review';
 
-  // Document Review View
+  // Document Review View - when reviewing contract
   if (isReviewing && activeTab === 'Review') {
     return (
       <div className="min-h-screen flex flex-col bg-background font-sans">
@@ -616,7 +655,7 @@ export default function ContractPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button variant="outline" className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50 whitespace-nowrap">
+                  <Button onClick={handleOpenUploadModal} variant="outline" className="border-[#4a90d9] text-[#4a90d9] hover:bg-blue-50 whitespace-nowrap">
                     Upload New Contract Version
                   </Button>
                   <Button onClick={handleSubmitForApproval} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
@@ -758,12 +797,151 @@ export default function ContractPage() {
           </div>
           <div className="text-[10px]">Terms and Conditions</div>
         </footer>
+
+        {/* Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <Card className="w-full max-w-md bg-white border-0 shadow-lg">
+              <div className="p-6 space-y-6">
+                {/* Step 1: Upload */}
+                {uploadStep === 'upload' && (
+                  <>
+                    <div>
+                      <h2 className="text-lg font-semibold text-foreground mb-1">Upload a New Contract Version</h2>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">Document title</label>
+                        <input
+                          type="text"
+                          placeholder="Contract1234_GlobalMSA_v1.5"
+                          className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9]"
+                        />
+                      </div>
+
+                      {/* File upload area */}
+                      <div
+                        className="border-2 border-dashed border-border rounded p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => setUploadedFileName('Contract1234_GlobalMSA_v1.5')}
+                      >
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground mb-2">
+                          <path d="M12 2v20M2 12h20"/><path d="M6 6h12v12H6z" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <p className="text-sm text-foreground font-medium">+ Drag and drop to upload</p>
+                      </div>
+
+                      {/* Uploaded file card */}
+                      {uploadedFileName && (
+                        <div className="border border-border rounded p-4 flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-foreground">{uploadedFileName}</div>
+                              <div className="text-xs text-muted-foreground mt-1">Type: Contract</div>
+                              <div className="text-xs text-muted-foreground">Created: 15/10/2025</div>
+                              <div className="text-xs text-muted-foreground">1.2mb</div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setUploadedFileName('')}
+                            className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
+                          >
+                            <Trash2 size={16} className="text-muted-foreground" />
+                          </button>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">Select contract to supersede</label>
+                        <select className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9] bg-white">
+                          <option value="">-- Select --</option>
+                          <option value="v1">Contract1234_GlobalMSA_v1.4</option>
+                          <option value="v2">Contract1234_GlobalMSA_v1.3</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                      <button
+                        onClick={handleCloseUploadModal}
+                        className="text-sm font-medium text-[#4a90d9] hover:text-[#3a7fc9]"
+                      >
+                        Cancel
+                      </button>
+                      <Button
+                        onClick={handleUploadNext}
+                        disabled={!uploadedFileName}
+                        className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 2: Next Action */}
+                {uploadStep === 'action' && (
+                  <>
+                    <div>
+                      <h2 className="text-lg font-semibold text-foreground mb-4">WHAT IS THE NEXT ACTION FOR THIS CONTRACT?</h2>
+                      <p className="text-sm text-muted-foreground">Select the status of the contract to determine the appropriate review and approval workflow.</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {[
+                        { id: 'approval', title: 'Ready for approval', desc: 'The contract has been reviewed and is ready to proceed to approval and signature.' },
+                        { id: 're-review', title: 'Contract to be re-reviewed', desc: 'Upload a revised version of the contract so it can be reviewed again.' },
+                        { id: 'no-action', title: 'No Action', desc: 'Record this version without starting a review or approval process.' },
+                      ].map(option => (
+                        <button
+                          key={option.id}
+                          onClick={() => setNextAction(option.id as 'approval' | 're-review' | 'no-action')}
+                          className={`w-full flex items-start gap-3 p-4 rounded border-2 transition-colors text-left ${
+                            nextAction === option.id
+                              ? 'border-[#4a90d9] bg-blue-50'
+                              : 'border-border hover:border-gray-400 bg-white'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${
+                            nextAction === option.id ? 'border-[#4a90d9]' : 'border-gray-300'
+                          }`}>
+                            {nextAction === option.id && <div className="w-2.5 h-2.5 rounded-full bg-[#4a90d9]" />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-foreground">{option.title}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{option.desc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                      <button
+                        onClick={() => setUploadStep('upload')}
+                        className="text-sm font-medium text-[#4a90d9] hover:text-[#3a7fc9]"
+                      >
+                        Cancel
+                      </button>
+                      <Button
+                        onClick={handleAddVersion}
+                        disabled={!nextAction}
+                        className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     );
   }
-
-  // Default Overview view
-  return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
 
       {/* Top nav */}
@@ -963,6 +1141,148 @@ export default function ContractPage() {
           <div className="text-[10px]">Terms and Conditions</div>
         </div>
       </footer>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md bg-white border-0 shadow-lg">
+            <div className="p-6 space-y-6">
+              {/* Step 1: Upload */}
+              {uploadStep === 'upload' && (
+                <>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground mb-1">Upload a New Contract Version</h2>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">Document title</label>
+                      <input
+                        type="text"
+                        placeholder="Contract1234_GlobalMSA_v1.5"
+                        className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9]"
+                      />
+                    </div>
+
+                    {/* File upload area */}
+                    <div
+                      className="border-2 border-dashed border-border rounded p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setUploadedFileName('Contract1234_GlobalMSA_v1.5')}
+                    >
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground mb-2">
+                        <path d="M12 2v20M2 12h20"/><path d="M6 6h12v12H6z" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <p className="text-sm text-foreground font-medium">+ Drag and drop to upload</p>
+                    </div>
+
+                    {/* Uploaded file card */}
+                    {uploadedFileName && (
+                      <div className="border border-border rounded p-4 flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-foreground">{uploadedFileName}</div>
+                            <div className="text-xs text-muted-foreground mt-1">Type: Contract</div>
+                            <div className="text-xs text-muted-foreground">Created: 15/10/2025</div>
+                            <div className="text-xs text-muted-foreground">1.2mb</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setUploadedFileName('')}
+                          className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
+                        >
+                          <Trash2 size={16} className="text-muted-foreground" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">Select contract to supersede</label>
+                      <select className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4a90d9] bg-white">
+                        <option value="">-- Select --</option>
+                        <option value="v1">Contract1234_GlobalMSA_v1.4</option>
+                        <option value="v2">Contract1234_GlobalMSA_v1.3</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <button
+                      onClick={handleCloseUploadModal}
+                      className="text-sm font-medium text-[#4a90d9] hover:text-[#3a7fc9]"
+                    >
+                      Cancel
+                    </button>
+                    <Button
+                      onClick={handleUploadNext}
+                      disabled={!uploadedFileName}
+                      className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* Step 2: Next Action */}
+              {uploadStep === 'action' && (
+                <>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground mb-4">WHAT IS THE NEXT ACTION FOR THIS CONTRACT?</h2>
+                    <p className="text-sm text-muted-foreground">Select the status of the contract to determine the appropriate review and approval workflow.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {[
+                      { id: 'approval', title: 'Ready for approval', desc: 'The contract has been reviewed and is ready to proceed to approval and signature.' },
+                      { id: 're-review', title: 'Contract to be re-reviewed', desc: 'Upload a revised version of the contract so it can be reviewed again.' },
+                      { id: 'no-action', title: 'No Action', desc: 'Record this version without starting a review or approval process.' },
+                    ].map(option => (
+                      <button
+                        key={option.id}
+                        onClick={() => setNextAction(option.id as 'approval' | 're-review' | 'no-action')}
+                        className={`w-full flex items-start gap-3 p-4 rounded border-2 transition-colors text-left ${
+                          nextAction === option.id
+                            ? 'border-[#4a90d9] bg-blue-50'
+                            : 'border-border hover:border-gray-400 bg-white'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${
+                          nextAction === option.id ? 'border-[#4a90d9]' : 'border-gray-300'
+                        }`}>
+                          {nextAction === option.id && <div className="w-2.5 h-2.5 rounded-full bg-[#4a90d9]" />}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-foreground">{option.title}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{option.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <button
+                      onClick={() => setUploadStep('upload')}
+                      className="text-sm font-medium text-[#4a90d9] hover:text-[#3a7fc9]"
+                    >
+                      Cancel
+                    </button>
+                    <Button
+                      onClick={handleAddVersion}
+                      disabled={!nextAction}
+                      className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
