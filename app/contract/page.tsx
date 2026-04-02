@@ -3,9 +3,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink, ChevronDown, ChevronUp, Flag, ZoomIn, ZoomOut, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink, ChevronDown, ChevronUp, Flag, ZoomIn, ZoomOut, FileText, Trash2, Clock, User, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  EXAMPLE_OPPORTUNITY,
+  EXAMPLE_CONTRACT,
+  EXAMPLE_RISK_ASSESSMENT,
+  EXAMPLE_TASKS,
+  EXAMPLE_GUARDRAILS,
+  EXAMPLE_FILES,
+  EXAMPLE_COMMENTS,
+  EXAMPLE_MSA_SUMMARY,
+  getRiskLevelLabel,
+  getRiskLevelColor,
+  formatCurrency,
+  formatDate,
+  type Task,
+} from '@/lib/contract-data';
 
 const PIPELINE_STAGES = [
   { id: 'prep',        label: 'Contract Preparation',          done: true  },
@@ -20,80 +35,38 @@ const PIPELINE_STAGES = [
 
 const CONTRACT_TABS = ['Overview', 'Documents', 'Review', 'Approve', 'Sign', 'Mitigations', 'History'];
 
-const CONTRACT_INFO_ROWS = [
-  { label: 'CONTRACT TYPE',                     value: 'STANDALONE' },
-  { label: 'CLIENT SIGNING DATE',               value: '–' },
-  { label: 'PRIMARY CONTRACT',                  value: 'YES' },
-  { label: 'LOD LEVEL',                         value: 'LEVEL 2' },
-  { label: 'APPROVAL TO START WITHOUT SIGNING', value: '–' },
-  { label: 'CONTRACT END DATE',                 value: '–' },
-  { label: 'CONTRACT TITLE',                    value: '1 LONDON STREET STANDALONE ONE OFF V1' },
-  { label: 'REVIEW DATE REQUIRED',              value: '01/2/2026' },
-  { label: 'OUR SIGNING DATE',                  value: '–' },
+// Dynamic contract info based on example data
+const getContractInfoRows = () => [
+  { label: 'CONTRACT REFERENCE',                value: EXAMPLE_CONTRACT.crReference },
+  { label: 'CONTRACT TYPE',                     value: EXAMPLE_CONTRACT.contractType.toUpperCase() },
+  { label: 'CLIENT',                            value: EXAMPLE_OPPORTUNITY.client },
+  { label: 'CLIENT SIGNING DATE',               value: EXAMPLE_CONTRACT.clientSigningDate || '–' },
+  { label: 'CONFIDENTIALITY',                   value: EXAMPLE_CONTRACT.confidentialityLevel.toUpperCase().replace('_', ' ') },
+  { label: 'CONTRACT LENGTH',                   value: EXAMPLE_CONTRACT.contractLength },
+  { label: 'CONTRACT TITLE',                    value: EXAMPLE_CONTRACT.contractTitle },
+  { label: 'REVIEW DATE REQUIRED',              value: formatDate(EXAMPLE_CONTRACT.reviewRequiredDate) },
+  { label: 'OUR SIGNING DATE',                  value: EXAMPLE_CONTRACT.ourSigningDate || '–' },
+  { label: 'OPPORTUNITY DIRECTOR',              value: EXAMPLE_OPPORTUNITY.opportunityDirector },
+  { label: 'OPPORTUNITY MANAGER',               value: EXAMPLE_OPPORTUNITY.opportunityManager },
+  { label: 'FEE VALUE',                         value: formatCurrency(EXAMPLE_RISK_ASSESSMENT.approxFee, EXAMPLE_RISK_ASSESSMENT.currency) },
 ];
 
-const FLAGGED_CLAUSES = [
-  {
-    id: 1,
-    title: 'Professional indemnity insurance / potential unlimited liability',
-    risk: 'VERY HIGH',
-    riskColor: 'bg-red-100 text-red-700',
-    clauseType: 'Insurance',
-    flaggedClause: '"When reasonably requested by us you are to provide documentary evidence that the insurance required under this Appointment is being maintained."',
-    amendments: "Clauses requiring you to maintain PI insurance and prove it — where the same area of the contract doesn't clearly cap your overall liability. It's flagging possible exposure above your insurance limits.",
-    mitigation: null,
-  },
-  {
-    id: 2,
-    title: 'Sub-consultant payment terms',
-    risk: 'UNACCEPTABLE',
-    riskColor: 'bg-gray-200 text-gray-700',
-    clauseType: 'Payment Terms',
-    flaggedClause: 'Payment terms for sub-consultants extend beyond 60 days.',
-    amendments: 'Standard payment terms should not exceed 30 days for sub-consultants.',
-    mitigation: null,
-  },
-  {
-    id: 3,
-    title: 'Liability cap above standard level',
-    risk: 'HIGH',
-    riskColor: 'bg-amber-100 text-amber-700',
-    clauseType: 'Liability / Limitation of liability',
-    flaggedClause: '"The Consultant\'s aggregate liability to the Client arising out of or in connection with this Agreement shall be limited to an amount equal to 200% of the Fees or £10,000,000, whichever is greater."',
-    amendments: "The Consultant's total aggregate liability shall be limited to £5,000,000 (five million pounds). This cap applies to all claims in aggregate.",
-    mitigation: "We have agreed a higher PI cap of £10m (standard £5m) but confirmed with Insurance that cover is available on existing terms. The higher cap is limited to this project only and excludes consequential loss.",
-  },
-  {
-    id: 4,
-    title: 'Indemnity wording broader than template',
-    risk: 'MEDIUM',
-    riskColor: 'bg-gray-100 text-gray-600',
-    clauseType: 'Indemnity',
-    flaggedClause: 'Indemnity clause extends beyond standard template wording.',
-    amendments: 'Review and narrow the indemnity scope to match template.',
-    mitigation: null,
-  },
-  {
-    id: 5,
-    title: 'Extended limitation period (beyond 6 years)',
-    risk: 'MEDIUM',
-    riskColor: 'bg-gray-100 text-gray-600',
-    clauseType: 'Limitation period / Time bar',
-    flaggedClause: 'Limitation period extends to 12 years.',
-    amendments: 'Standard limitation period is 6 years.',
-    mitigation: null,
-  },
-  {
-    id: 6,
-    title: 'Unfavourable payment terms (long payment period / pay-when-paid)',
-    risk: 'LOW',
-    riskColor: 'bg-green-100 text-green-700',
-    clauseType: 'Payment Terms / Commercial',
-    flaggedClause: 'Payment terms extend to 90 days.',
-    amendments: 'Standard payment terms are 30 days.',
-    mitigation: null,
-  },
-];
+// Map guardrails to the display format used in the UI
+const FLAGGED_CLAUSES = EXAMPLE_GUARDRAILS.map(g => ({
+  id: g.id,
+  title: g.clauseCategory === 'Insurance' ? 'Professional indemnity insurance / potential unlimited liability' :
+         g.clauseCategory === 'Payment Terms' ? 'Sub-consultant payment terms' :
+         g.clauseCategory === 'Liability / Limitation of liability' ? 'Liability cap above standard level' :
+         g.clauseCategory === 'Indemnity' ? 'Indemnity wording broader than template' :
+         g.clauseCategory === 'Limitation period / Time bar' ? 'Extended limitation period (beyond 6 years)' :
+         'Unfavourable payment terms (long payment period / pay-when-paid)',
+  risk: getRiskLevelLabel(g.riskLevel),
+  riskColor: getRiskLevelColor(g.riskLevel),
+  clauseType: g.clauseCategory,
+  flaggedClause: g.rawText,
+  amendments: g.proposedAmendment,
+  mitigation: g.mitigation?.mitigationDescription || null,
+}));
 
 const DOCUMENT_PARAGRAPHS = [
   { num: '4.2', text: 'A payment application in respect of an instalment may not be given until after the end of the relevant period.' },
@@ -165,8 +138,8 @@ function AppHeader({
             <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="text-sm font-semibold">1 LONDON STREET – 1823456</div>
-            <div className="text-xs text-white/60">CONTRACT: MSA 12345678</div>
+            <div className="text-sm font-semibold">{EXAMPLE_OPPORTUNITY.opportunityName.toUpperCase()} – {EXAMPLE_OPPORTUNITY.opportunityReference.split('-').pop()}</div>
+            <div className="text-xs text-white/60">CONTRACT: {EXAMPLE_CONTRACT.crReference}</div>
           </div>
         </div>
       )}
@@ -229,29 +202,89 @@ function PipelineBar({ activeStageId }: { activeStageId: string }) {
 }
 
 function RiskSummaryCard() {
+  const highRisk = EXAMPLE_GUARDRAILS.filter(g => g.riskLevel >= 4);
+  const mediumRisk = EXAMPLE_GUARDRAILS.filter(g => g.riskLevel === 3);
+  const overallRisk = EXAMPLE_CONTRACT.riskReview;
+  
   return (
     <Card className="bg-white border border-border p-5">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk Summary</h3>
       <div className="space-y-4">
         <div>
           <div className="text-xs text-muted-foreground mb-1">OVERALL RISK</div>
-          <span className="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-700">MEDIUM</span>
+          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+            overallRisk === 'very_high' ? 'bg-red-200 text-red-800' :
+            overallRisk === 'high' ? 'bg-red-100 text-red-700' :
+            overallRisk === 'medium' ? 'bg-amber-100 text-amber-700' :
+            'bg-green-100 text-green-700'
+          }`}>{overallRisk.toUpperCase().replace('_', ' ')}</span>
         </div>
         <div>
           <div className="text-xs text-muted-foreground mb-2">GUARDRAILS TRIGGERED</div>
           <ul className="text-xs text-foreground space-y-1">
-            <li>• LIABILITY CAP ABOVE STANDARD LEVEL</li>
-            <li>• INDEMNITY WORDING BROADER THAN TEMPLATE</li>
-            <li>• EXTENDED LIMITATION PERIOD</li>
+            {EXAMPLE_GUARDRAILS.slice(0, 3).map(g => (
+              <li key={g.id}>• {g.clauseCategory.toUpperCase()}</li>
+            ))}
           </ul>
         </div>
         <div>
           <div className="text-xs text-muted-foreground mb-2">RED/AMBER GUARDRAILS</div>
           <ul className="text-xs text-foreground space-y-1">
-            <li>• 1 RED – LIABILITY CAP INCREASED TO £10M (STANDARD £5M)</li>
-            <li>• 2 AMBER – CLIENT INDEMNITY NOT MUTUAL; LIMITATION PERIOD EXTENDED FROM 6 TO 12 YEARS</li>
+            <li>• {highRisk.length} RED – {highRisk.map(g => g.clauseCategory).join('; ')}</li>
+            <li>• {mediumRisk.length} AMBER – {mediumRisk.map(g => g.clauseCategory).join('; ')}</li>
           </ul>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function TasksPanel() {
+  const getStatusColor = (status: Task['status']) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-700';
+      case 'in_progress': return 'bg-blue-100 text-blue-700';
+      case 'overdue': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+  
+  const getStatusIcon = (status: Task['status']) => {
+    switch (status) {
+      case 'completed': return <CheckCircle2 size={14} />;
+      case 'in_progress': return <Clock size={14} />;
+      case 'overdue': return <AlertTriangle size={14} />;
+      default: return <Clock size={14} />;
+    }
+  };
+
+  return (
+    <Card className="bg-white border border-border p-5">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Active Tasks</h3>
+      <div className="space-y-3">
+        {EXAMPLE_TASKS.map(task => (
+          <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+            <div className={`p-1.5 rounded ${getStatusColor(task.status)}`}>
+              {getStatusIcon(task.status)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-foreground truncate">{task.action}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <User size={12} />
+                  <span>{task.userName}</span>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar size={12} />
+                  <span>{formatDate(task.urgencyDate)}</span>
+                </div>
+              </div>
+            </div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${getStatusColor(task.status)}`}>
+              {task.status.replace('_', ' ')}
+            </span>
+          </div>
+        ))}
       </div>
     </Card>
   );
@@ -1305,8 +1338,8 @@ export default function ContractPage() {
         <div className="bg-[#1e2a5e] border-t border-white/10 px-4 py-2 flex items-center gap-3">
           <button onClick={() => router.back()} className="hover:bg-white/10 rounded p-1"><ArrowLeft size={16} /></button>
           <div>
-            <div className="text-sm font-semibold">1 LONDON STREET – 1823456</div>
-            <div className="text-xs text-white/60">CONTRACT: MSA 12345678</div>
+            <div className="text-sm font-semibold">{EXAMPLE_OPPORTUNITY.opportunityName.toUpperCase()} – {EXAMPLE_OPPORTUNITY.opportunityReference.split('-').pop()}</div>
+            <div className="text-xs text-white/60">CONTRACT: {EXAMPLE_CONTRACT.crReference}</div>
           </div>
         </div>
         <div className="flex gap-0 border-t border-white/10 px-4">
@@ -1336,34 +1369,34 @@ export default function ContractPage() {
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Client</div>
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded bg-red-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-xs">HSBC</span>
+                    <div className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-[10px]">BP</span>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-[#4a90d9]">HSBC</div>
-                      <div className="text-xs text-muted-foreground">123 London Road</div>
+                      <div className="text-sm font-semibold text-[#4a90d9]">{EXAMPLE_OPPORTUNITY.client}</div>
+                      <div className="text-xs text-muted-foreground">1 London Street</div>
                       <div className="text-xs text-muted-foreground">London</div>
-                      <div className="text-xs text-muted-foreground">W1F 5AS</div>
+                      <div className="text-xs text-muted-foreground">EC2N 1HP</div>
                       <a href="#" className="text-xs text-[#4a90d9] font-semibold flex items-center gap-1 mt-1">
                         VIEW WEBSITE <ExternalLink size={10} />
                       </a>
                     </div>
                   </div>
                   <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">
-                    <div>UK\ADVISORY\SHQ\UK</div>
-                    <div>HSBC GLOBAL</div>
-                    <div>1 LONDON STREET</div>
+                    <div>{EXAMPLE_OPPORTUNITY.costCentre}</div>
+                    <div>{EXAMPLE_OPPORTUNITY.country.toUpperCase()}</div>
+                    <div>{EXAMPLE_OPPORTUNITY.opportunityName}</div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Director</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Opportunity Director</div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center">
-                      <span className="text-xs font-bold text-gray-600">MW</span>
+                      <span className="text-xs font-bold text-gray-600">{EXAMPLE_OPPORTUNITY.opportunityDirector.split(' ').map(n => n[0]).join('')}</span>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-[#4a90d9]">Mary Watkins</div>
-                      <div className="text-xs text-muted-foreground">Director</div>
+                      <div className="text-sm font-semibold text-[#4a90d9]">{EXAMPLE_OPPORTUNITY.opportunityDirector}</div>
+                      <div className="text-xs text-muted-foreground">Opportunity Director</div>
                       <div className="text-xs text-muted-foreground">London</div>
                     </div>
                   </div>
@@ -1372,10 +1405,10 @@ export default function ContractPage() {
                   <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Opportunity Manager</div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center">
-                      <span className="text-xs font-bold text-gray-600">JD</span>
+                      <span className="text-xs font-bold text-gray-600">{EXAMPLE_OPPORTUNITY.opportunityManager.split(' ').map(n => n[0]).join('')}</span>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-[#4a90d9]">John Douglas</div>
+                      <div className="text-sm font-semibold text-[#4a90d9]">{EXAMPLE_OPPORTUNITY.opportunityManager}</div>
                       <div className="text-xs text-muted-foreground">Associate Director</div>
                       <div className="text-xs text-muted-foreground">London</div>
                     </div>
@@ -1383,6 +1416,11 @@ export default function ContractPage() {
                 </div>
               </div>
             </Card>
+            
+            {/* Tasks Panel - Left Column */}
+            <div className="col-span-1 self-start mt-4">
+              <TasksPanel />
+            </div>
 
             <div className="col-span-2 space-y-4">
               <Card className="bg-white border border-border p-4">
@@ -1420,8 +1458,8 @@ export default function ContractPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Information</h3>
                 </div>
                 <div>
-                  {CONTRACT_INFO_ROWS.map((row, i) => (
-                    <div key={i} className={`flex items-center px-5 py-3 ${i < CONTRACT_INFO_ROWS.length - 1 ? 'border-b border-border' : ''}`}>
+                  {getContractInfoRows().map((row, i, arr) => (
+                    <div key={i} className={`flex items-center px-5 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
                       <span className="w-64 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex-shrink-0">{row.label}</span>
                       <span className="text-sm text-foreground">{row.value}</span>
                     </div>
