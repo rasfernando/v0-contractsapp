@@ -31,7 +31,7 @@ import { useUser, canSeeTask, canCreateOpportunity, getRoleLabel } from '@/lib/u
 import { UserSwitcher } from '@/components/user-switcher';
 
 // Tasks based on existing opportunities - each task is assigned to a specific role
-const ALL_TASKS = [
+const TASK_REGISTRY = [
   {
     id: 1,
     name: 'Complete RM Review',
@@ -256,7 +256,7 @@ export default function DashboardPage() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   
   // Filter tasks based on current user's role
-  const TASKS = ALL_TASKS.filter(task => task.assignedTo === currentUser.role);
+  const TASKS = TASK_REGISTRY.filter(task => task.assignedTo === currentUser.role);
 
   // Form state for Create Opportunity
   const [opportunityName, setOpportunityName] = useState('');

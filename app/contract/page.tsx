@@ -122,8 +122,8 @@ function AppHeader({
           </div>
           <span className="text-white/50 text-sm">Contracts App</span>
         </div>
-<div className="flex items-center gap-4">
-  <UserSwitcher />
+        <div className="flex items-center gap-4">
+          <UserSwitcher />
           <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
           <span className="text-sm">Support</span>
         </div>
@@ -626,12 +626,7 @@ function SigningView({
             <span className="text-white/50 text-sm">Contracts App</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-white/80">Hi [User first name]</span>
-            <button className="p-1.5 hover:bg-white/10 rounded">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-              </svg>
-            </button>
+            <UserSwitcher />
             <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
             <span className="text-sm">Support</span>
           </div>
@@ -1202,11 +1197,11 @@ export default function ContractPage() {
               </div>
               <span className="text-white/50 text-sm">Contracts App</span>
             </div>
-          <div className="flex items-center gap-4">
-            <UserSwitcher />
-            <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
-            <span className="text-sm">Support</span>
-          </div>
+            <div className="flex items-center gap-4">
+              <UserSwitcher />
+              <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
+              <span className="text-sm">Support</span>
+            </div>
           </div>
           <div className="px-4 py-2 border-t border-white/10">
             <div className="text-sm font-semibold">1 LONDON STREET - 1823456</div>
@@ -1351,12 +1346,7 @@ export default function ContractPage() {
             <span className="text-white/50 text-sm">Contracts App</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-white/80">Hi [User first name]</span>
-            <button className="p-1.5 hover:bg-white/10 rounded">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-              </svg>
-            </button>
+            <UserSwitcher />
             <button className="p-1.5 hover:bg-white/10 rounded"><HelpCircle size={18} /></button>
             <span className="text-sm">Support</span>
           </div>
