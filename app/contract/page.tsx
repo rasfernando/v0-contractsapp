@@ -1,5 +1,5 @@
 'use client';
-// Contract page with full workflow: review, negotiation, approval, signing
+// Contract page — stepper bar below header, role-based CTAs
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1028,10 +1028,12 @@ export default function ContractPage() {
           onTabChange={(tab) => { setActiveTab(tab); setReviewComplete(false); }}
         />
 
+        <div className="bg-white border-b border-border px-6 py-3">
+          <PipelineBar activeStageId="rm_review" />
+        </div>
+
         <main className="flex-1 p-6 bg-gray-50">
           <div className="max-w-6xl mx-auto space-y-6">
-            <PipelineBar activeStageId="rm_review" />
-
             <Card className="bg-white border border-border p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -1062,30 +1064,26 @@ export default function ContractPage() {
                 <Card className="bg-white border border-border">
                   <div className="p-4 border-b border-border flex items-center justify-between">
                     <div className="flex gap-6">
-                      <button className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Review</button>
-                      <button className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Details</button>
+                      <button className="text-sm font-semibold text-foreground">REVIEW</button>
+                      <button className="text-sm font-semibold text-muted-foreground">DETAILS</button>
                     </div>
-                    <Button variant="outline" className="text-sm">View Contract</Button>
+                    <Button className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white text-sm">View Contract</Button>
                   </div>
                   <div className="flex gap-6 px-4 border-b border-border">
                     <button
                       onClick={() => setReviewSubTab('details')}
-                      className={`py-3 text-sm font-medium border-b-2 transition-colors ${reviewSubTab === 'details' ? 'border-[#4a90d9] text-[#4a90d9]' : 'border-transparent text-muted-foreground'}`}
+                      className={`py-3 text-sm transition-colors ${reviewSubTab === 'details' ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium' : 'text-muted-foreground'}`}
                     >
                       Contract details
                     </button>
                     <button
                       onClick={() => setReviewSubTab('guardrails')}
-                      className={`py-3 text-sm font-medium border-b-2 transition-colors ${reviewSubTab === 'guardrails' ? 'border-[#4a90d9] text-[#4a90d9]' : 'border-transparent text-muted-foreground'}`}
+                      className={`py-3 text-sm transition-colors ${reviewSubTab === 'guardrails' ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium' : 'text-muted-foreground'}`}
                     >
                       Guardrails &amp; Mitigations
                     </button>
                   </div>
-                  <GuardrailsPanel
-                    expandedClause={expandedClause}
-                    setExpandedClause={setExpandedClause}
-                    clauses={FLAGGED_CLAUSES.slice(2)}
-                  />
+                  <GuardrailsPanel expandedClause={expandedClause} setExpandedClause={setExpandedClause} />
                 </Card>
               </div>
             </div>
@@ -1107,10 +1105,12 @@ export default function ContractPage() {
           onTabChange={(tab) => { setActiveTab(tab); setIsNegotiating(false); }}
         />
 
+        <div className="bg-white border-b border-border px-6 py-3">
+          <PipelineBar activeStageId="negotiation" />
+        </div>
+
         <main className="flex-1 p-6 bg-gray-50">
           <div className="max-w-6xl mx-auto space-y-6">
-            <PipelineBar activeStageId="negotiation" />
-
             <Card className="bg-white border border-border p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -1225,27 +1225,12 @@ export default function ContractPage() {
           </div>
         </header>
 
+        <div className="bg-white border-b border-border px-6 py-3">
+          <PipelineBar activeStageId="approval" />
+        </div>
+
         <main className="flex-1 p-6 bg-gray-50">
           <div className="max-w-6xl mx-auto space-y-6">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {PIPELINE_STAGES.map((stage, i) => {
-                const idx = PIPELINE_STAGES.findIndex(s => s.id === stage.id);
-                const isDone = idx < approvalIndex;
-                const isActive = stage.id === 'approval';
-                return (
-                  <div key={stage.id} className="flex items-center gap-1.5">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${
-                      isDone   ? 'bg-green-600 text-white' :
-                      isActive ? 'bg-[#4a90d9] text-white' :
-                      'bg-gray-200 text-gray-500'
-                    }`}>
-                      {stage.label}
-                    </span>
-                    {i < PIPELINE_STAGES.length - 1 && <span className="text-gray-400 text-xs font-bold">{'>'}</span>}
-                  </div>
-                );
-              })}
-            </div>
 
             <Card className="bg-white border border-border p-5">
               <div className="flex items-start justify-between gap-6">
@@ -1377,6 +1362,10 @@ export default function ContractPage() {
         </div>
       </header>
 
+      <div className="bg-white border-b border-border px-6 py-3">
+        <PipelineBar activeStageId="contract_preparation" />
+      </div>
+
       <main className="flex-1 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-3 gap-6">
@@ -1443,27 +1432,6 @@ export default function ContractPage() {
             </div>
 
             <div className="col-span-2 space-y-4">
-              <Card className="bg-white border border-border p-4">
-              <div className="flex items-center gap-1 flex-nowrap overflow-x-auto">
-                  {PIPELINE_STAGES.map((stage, i) => (
-                    <div key={stage.id} className="flex items-center gap-1 flex-shrink-0">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                        stage.done
-                          ? 'bg-green-600 text-white'
-                          : stage.active
-                          ? 'border border-[#4a90d9] text-[#4a90d9] bg-white'
-                          : 'text-gray-400'
-                      }`}>
-                        {stage.label}
-                      </span>
-                      {i < PIPELINE_STAGES.length - 1 && (
-                        <span className="text-gray-400 text-xs select-none flex-shrink-0">{'>'}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
               <Card className="bg-white border border-border p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
