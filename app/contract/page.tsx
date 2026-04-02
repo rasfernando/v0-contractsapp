@@ -942,6 +942,9 @@ export default function ContractPage() {
       </div>
     );
   }
+
+  // Default Overview view
+  return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
 
       {/* Top nav */}
@@ -1286,3 +1289,4 @@ export default function ContractPage() {
     </div>
   );
 }
+// Force rebuild
