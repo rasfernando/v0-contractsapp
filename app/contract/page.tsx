@@ -176,13 +176,13 @@ function AppFooter() {
 function PipelineBar({ activeStageId }: { activeStageId: string }) {
   const activeIndex = PIPELINE_STAGES.findIndex(s => s.id === activeStageId);
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-center gap-1 flex-nowrap overflow-x-auto">
       {PIPELINE_STAGES.map((stage, i) => {
         const idx = PIPELINE_STAGES.findIndex(s => s.id === stage.id);
         const isDone = idx < activeIndex;
         const isActive = stage.id === activeStageId;
         return (
-          <div key={stage.id} className="flex items-center gap-1">
+          <div key={stage.id} className="flex items-center gap-1 flex-shrink-0">
             <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
               isDone
                 ? 'bg-green-600 text-white'
@@ -193,7 +193,7 @@ function PipelineBar({ activeStageId }: { activeStageId: string }) {
               {stage.label}
             </span>
             {i < PIPELINE_STAGES.length - 1 && (
-              <span className="text-gray-400 text-xs select-none">{'>'}</span>
+              <span className="text-gray-400 text-xs select-none flex-shrink-0">{'>'}</span>
             )}
           </div>
         );
@@ -1444,9 +1444,9 @@ export default function ContractPage() {
 
             <div className="col-span-2 space-y-4">
               <Card className="bg-white border border-border p-4">
-              <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1 flex-nowrap overflow-x-auto">
                   {PIPELINE_STAGES.map((stage, i) => (
-                    <div key={stage.id} className="flex items-center gap-1">
+                    <div key={stage.id} className="flex items-center gap-1 flex-shrink-0">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                         stage.done
                           ? 'bg-green-600 text-white'
@@ -1457,7 +1457,7 @@ export default function ContractPage() {
                         {stage.label}
                       </span>
                       {i < PIPELINE_STAGES.length - 1 && (
-                        <span className="text-gray-400 text-xs select-none">{'>'}</span>
+                        <span className="text-gray-400 text-xs select-none flex-shrink-0">{'>'}</span>
                       )}
                     </div>
                   ))}
