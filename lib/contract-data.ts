@@ -401,7 +401,7 @@ export const EXAMPLE_MSA_SUMMARY: MSAKeyDealSummary = {
 // ─── Risk Assessment Status ────────────────────────────────────────────────────
 
 export type RiskAssessmentStatus = 'required' | 'in_progress' | 'awaiting_approval' | 'complete';
-export type ContractStatus = 'preparation' | 'rm_review' | 'negotiation' | 'approval' | 'signing' | 'active' | 'complete' | null;
+export type ContractStatus = 'preparation' | 'rm_review' | 'negotiation' | 'approval' | 'signing' | 'active' | 'complete' | 'rejected' | null;
 
 export interface OpportunityRiskAssessment {
   id: string;
@@ -689,6 +689,8 @@ export function getContractStatusStyle(status: ContractStatus): { label: string;
       return { label: 'Active', className: 'bg-green-100 text-green-700' };
     case 'complete':
       return { label: 'Complete', className: 'bg-green-200 text-green-800' };
+    case 'rejected':
+      return { label: 'Rejected', className: 'bg-red-100 text-red-700' };
     default:
       return null;
   }
