@@ -40,7 +40,7 @@ const PIPELINE_STAGES = [
   { id: 'complete',    label: 'Complete',                      done: false },
 ];
 
-const CONTRACT_TABS = ['Overview', 'Documconst CONTRACT_TABS = ['Overview', 'Documents', 'Workspaces', 'History'];
+const CONTRACT_TABS = ['Overview', 'Documents', 'Workspaces', 'History'];
 
 // Dynamic contract info based on example data
 const getContractInfoRows = () => [
