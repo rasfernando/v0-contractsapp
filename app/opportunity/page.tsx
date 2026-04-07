@@ -10,11 +10,17 @@ import { Label } from '@/components/ui/label';
 import {
   getOpportunityById,
   getOpportunityByIdFromDB,
+  createRiskAssessmentInDB,
   OPPORTUNITY_ROWS,
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
 } from '@/lib/contract-data';
-import type { OpportunityRow, OpportunityRiskAssessment, OpportunityContract } from '@/lib/contract-data';
+import type {
+  OpportunityRow,
+  OpportunityRiskAssessment,
+  OpportunityContract,
+  CreateRiskAssessmentInput,
+} from '@/lib/contract-data';
 import { useUser, canCreateContract, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
 import { UserSwitcher } from '@/components/user-switcher';
 
@@ -46,7 +52,28 @@ const SUMMARY_ROWS = [
   { category: 'Delivery Complexity',status: 'Moderate',     statusColor: 'bg-amber-400', notes: 'Multiple subcontractors' },
 ];
 
-function RiskAssessmentSheet({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
+function RiskAssessmentSheet({
+  onClose,
+  onComplete,
+}: {
+  onClose: () => void;
+  onComplete: (data: {
+    projectScope: string;
+    startDate: string;
+    endDate: string;
+    jointVenture: boolean;
+    cbreReferred: boolean;
+    estimatedFee: string;
+    margin: string;
+    probabilityOfWinning: string;
+    proposalDate: string;
+    boundaries: string;
+    riskGuidanceReviewed: boolean;
+    riskCategories: string[];
+    otherText: string;
+    note: string;
+  }) => void;
+}) {
   const [step, setStep] = useState<RiskStep>('project');
 
   // Project step state
@@ -385,7 +412,28 @@ function RiskAssessmentSheet({ onClose, onComplete }: { onClose: () => void; onC
                 Next <ChevronRight size={16} />
               </Button>
             ) : (
-              <Button onClick={() => { onComplete(); onClose(); }} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white">
+              <Button
+                onClick={() => {
+                  onComplete({
+                    projectScope,
+                    startDate,
+                    endDate,
+                    jointVenture: jointVenture === 'yes',
+                    cbreReferred: cbreReferred === 'yes',
+                    estimatedFee,
+                    margin,
+                    probabilityOfWinning,
+                    proposalDate,
+                    boundaries,
+                    riskGuidanceReviewed: riskGuidanceReviewed === 'yes',
+                    riskCategories: selectedCategories,
+                    otherText,
+                    note,
+                  });
+                  onClose();
+                }}
+                className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white"
+              >
                 Create record
               </Button>
             )}
@@ -1334,16 +1382,37 @@ function OpportunityPageContent() {
       {isRiskSheetOpen && (
         <RiskAssessmentSheet
           onClose={() => setIsRiskSheetOpen(false)}
-          onComplete={() => {
-            const newRA: OpportunityRiskAssessment = {
-              id: `RA-NEW-${Date.now()}`,
-              name: `${opportunity.name} Risk Assessment`,
-              date: new Date().toLocaleDateString('en-GB'),
-              status: 'awaiting_approval',
-              serviceType: 'Project Management',
-            };
-            setRiskAssessments(prev => [...prev, newRA]);
-            setShowSuccess(true);
+          onComplete={async (data) => {
+            try {
+              const newRA = await createRiskAssessmentInDB({
+                opportunityId: opportunity.id,
+                name: `${opportunity.name} Risk Assessment`,
+                serviceType: 'Project Management',
+                projectScope: data.projectScope,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                jointVenture: data.jointVenture,
+                cbreReferred: data.cbreReferred,
+                estimatedFee: data.estimatedFee,
+                margin: data.margin,
+                probabilityOfWinning: data.probabilityOfWinning,
+                proposalDate: data.proposalDate,
+                boundaries: data.boundaries,
+                riskGuidanceReviewed: data.riskGuidanceReviewed,
+                riskCategories: data.riskCategories,
+                otherText: data.otherText,
+                note: data.note,
+              });
+              setRiskAssessments(prev => [...prev, newRA]);
+              // Update the parent opportunity's status in local state too
+              setOpportunity(prev =>
+                prev ? { ...prev, riskAssessmentStatus: 'awaiting_approval' } : prev
+              );
+              setShowSuccess(true);
+            } catch (err) {
+              console.error('Failed to create risk assessment:', err);
+              alert('Failed to create risk assessment. Please try again.');
+            }
           }}
         />
       )}
