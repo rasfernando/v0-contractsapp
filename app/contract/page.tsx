@@ -1,8 +1,8 @@
 'use client';
 // Contract page — stepper bar below header, role-based CTAs
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink, ChevronDown, ChevronUp, Flag, ZoomIn, ZoomOut, FileText, Trash2, Clock, User, AlertTriangle, CheckCircle2, Calendar, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,12 +19,16 @@ import {
   EXAMPLE_COMMENTS,
   EXAMPLE_MSA_SUMMARY,
   INITIAL_DOCS,
-  type ContractDocument,
+  getContractByIdFromDB,
+  getOpportunityByIdFromDB,
   getRiskLevelLabel,
   getRiskLevelColor,
   formatCurrency,
   formatDate,
   type Task,
+  type ContractDocument,
+  type FullContractRecord,
+  type OpportunityRow,
 } from '@/lib/contract-data';
 import { useUser, canReviewContract, canApproveContract, canSignContract, canNegotiateContract, getRoleLabel } from '@/lib/user-context';
 import { UserSwitcher } from '@/components/user-switcher';
@@ -43,19 +47,23 @@ const PIPELINE_STAGES = [
 const CONTRACT_TABS = ['Overview', 'Documents', 'Workspaces', 'History'];
 
 // Dynamic contract info based on example data
-const getContractInfoRows = () => [
-  { label: 'CONTRACT REFERENCE',                value: EXAMPLE_CONTRACT.crReference },
-  { label: 'CONTRACT TYPE',                     value: EXAMPLE_CONTRACT.contractType.toUpperCase() },
-  { label: 'CLIENT',                            value: EXAMPLE_OPPORTUNITY.client },
-  { label: 'CLIENT SIGNING DATE',               value: EXAMPLE_CONTRACT.clientSigningDate || '–' },
-  { label: 'CONFIDENTIALITY',                   value: EXAMPLE_CONTRACT.confidentialityLevel.toUpperCase().replace('_', ' ') },
-  { label: 'CONTRACT LENGTH',                   value: EXAMPLE_CONTRACT.contractLength },
-  { label: 'CONTRACT TITLE',                    value: EXAMPLE_CONTRACT.contractTitle },
-  { label: 'REVIEW DATE REQUIRED',              value: formatDate(EXAMPLE_CONTRACT.reviewRequiredDate) },
-  { label: 'OUR SIGNING DATE',                  value: EXAMPLE_CONTRACT.ourSigningDate || '–' },
-  { label: 'OPPORTUNITY DIRECTOR',              value: EXAMPLE_OPPORTUNITY.opportunityDirector },
-  { label: 'OPPORTUNITY MANAGER',               value: EXAMPLE_OPPORTUNITY.opportunityManager },
-  { label: 'FEE VALUE',                         value: formatCurrency(EXAMPLE_RISK_ASSESSMENT.approxFee, EXAMPLE_RISK_ASSESSMENT.currency) },
+// Dynamic contract info — pass in the loaded contract and opportunity
+const getContractInfoRows = (
+  contract: FullContractRecord | null,
+  opportunity: OpportunityRow | null
+) => [
+  { label: 'CONTRACT REFERENCE',                value: contract?.contractReference || '–' },
+  { label: 'CONTRACT TYPE',                     value: (contract?.contractType || '–').toUpperCase() },
+  { label: 'CLIENT',                            value: opportunity?.client || '–' },
+  { label: 'CLIENT SIGNING DATE',               value: '–' },
+  { label: 'CONFIDENTIALITY',                   value: '–' },
+  { label: 'CONTRACT LENGTH',                   value: '–' },
+  { label: 'CONTRACT TITLE',                    value: contract?.contractTitle || contract?.name || '–' },
+  { label: 'REVIEW DATE REQUIRED',              value: contract?.reviewRequiredDate || '–' },
+  { label: 'OUR SIGNING DATE',                  value: '–' },
+  { label: 'OPPORTUNITY DIRECTOR',              value: opportunity?.director || '–' },
+  { label: 'OPPORTUNITY MANAGER',               value: opportunity?.manager || '–' },
+  { label: 'FEE VALUE',                         value: '–' },
 ];
 
 // Map guardrails to the display format used in the UI
@@ -103,11 +111,15 @@ function AppHeader({
   tabs,
   activeTab,
   onTabChange,
+  contract,
+  opportunity,
 }: {
   breadcrumb?: boolean;
   tabs: string[];
   activeTab: string;
   onTabChange: (tab: string) => void;
+  contract?: FullContractRecord | null;
+  opportunity?: OpportunityRow | null;
 }) {
   return (
     <header className="bg-[#1e2a5e] text-white">
@@ -140,8 +152,8 @@ function AppHeader({
             <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="text-sm font-semibold">{EXAMPLE_OPPORTUNITY.opportunityName.toUpperCase()} – {EXAMPLE_OPPORTUNITY.opportunityReference.split('-').pop()}</div>
-            <div className="text-xs text-white/60">CONTRACT: {EXAMPLE_CONTRACT.crReference}</div>
+            <div className="text-sm font-semibold">{(opportunity?.name || EXAMPLE_OPPORTUNITY.opportunityName).toUpperCase()} – {(opportunity?.reference || EXAMPLE_OPPORTUNITY.opportunityReference).split('-').pop()}</div>
+            <div className="text-xs text-white/60">CONTRACT: {contract?.contractReference || EXAMPLE_CONTRACT.crReference}</div>
           </div>
         </div>
       )}
@@ -1132,11 +1144,18 @@ function DocumentsView({
 }
 // ─── Main page component ──────────────────────────────────────────────────────
 
-export default function ContractPage() {
+function ContractPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const contractId = searchParams.get('id');
   const { currentUser } = useUser();
+
+  // Data state — loaded from Supabase on mount
+  const [contract, setContract] = useState<FullContractRecord | null>(null);
+  const [opportunity, setOpportunity] = useState<OpportunityRow | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState('Overview');
-  const [docs, setDocs] = useState<ContractDocument[]>(INITIAL_DOCS);
   const [isReviewing, setIsReviewing] = useState(false);
   const [expandedClause, setExpandedClause] = useState<number | null>(1);
   const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
@@ -1151,6 +1170,35 @@ export default function ContractPage() {
   const [uploadStep, setUploadStep] = useState<'upload' | 'action'>('upload');
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [nextAction, setNextAction] = useState<'approval' | 're-review' | 'no-action' | null>(null);
+
+  // Load contract (and its parent opportunity) from Supabase
+  useEffect(() => {
+    if (!contractId) {
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+
+    getContractByIdFromDB(contractId)
+      .then(async (contractData) => {
+        if (cancelled) return;
+        if (contractData) {
+          setContract(contractData);
+          // Also load the parent opportunity
+          const oppData = await getOpportunityByIdFromDB(contractData.opportunityId);
+          if (cancelled) return;
+          setOpportunity(oppData);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [contractId]);
   
   // Permission checks based on role
   const canReview = canReviewContract(currentUser.role);
@@ -1219,6 +1267,8 @@ export default function ContractPage() {
           tabs={CONTRACT_TABS}
           activeTab={activeTab}
           onTabChange={(tab) => { setActiveTab(tab); if (tab !== 'Review') setIsReviewing(false); }}
+          contract={contract}
+          opportunity={opportunity}
         />
 
         <main className="flex-1 flex">
@@ -1338,6 +1388,8 @@ export default function ContractPage() {
           tabs={['Overview', 'Documents', 'History']}
           activeTab={activeTab}
           onTabChange={(tab) => { setActiveTab(tab); setReviewComplete(false); }}
+          contract={contract}
+          opportunity={opportunity}
         />
 
         <div className="bg-white border-b border-border px-6 py-3">
@@ -1415,6 +1467,8 @@ export default function ContractPage() {
           tabs={['Overview', 'Documents', 'History']}
           activeTab={activeTab}
           onTabChange={(tab) => { setActiveTab(tab); setIsNegotiating(false); }}
+          contract={contract}
+          opportunity={opportunity}
         />
 
         <div className="bg-white border-b border-border px-6 py-3">
@@ -1783,7 +1837,7 @@ export default function ContractPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Information</h3>
                 </div>
                 <div>
-                  {getContractInfoRows().map((row, i, arr) => (
+                  {getContractInfoRows(contract, opportunity).map((row, i, arr) => (
                     <div key={i} className={`flex items-center px-5 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
                       <span className="w-64 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex-shrink-0">{row.label}</span>
                       <span className="text-sm text-foreground">{row.value}</span>
@@ -1802,4 +1856,15 @@ export default function ContractPage() {
       {showUploadModal && <UploadTray {...uploadTrayProps} />}
     </div>
   );
+}
+function ContractPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground">Loading contract...</div></div>}>
+      <ContractPageContent />
+    </Suspense>
+  );
+}
+
+export default function ContractPage() {
+  return <ContractPageWrapper />;
 }
