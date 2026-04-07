@@ -1119,3 +1119,73 @@ export async function createRiskAssessmentInDB(
     serviceType: data.service_type ?? undefined,
   };
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH 3a — PART 2
+// APPEND THIS FUNCTION to the bottom of lib/contract-data.ts
+// (right after createRiskAssessmentInDB)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CreateContractInput {
+  opportunityId: string;
+  contractFlow: 'client' | 'supplier';
+  contractType: string;
+  contractTitle: string;
+  reviewRequiredDate: string;
+  creationMethod: 'builder' | 'upload';
+  msaLinkedId?: string | null;
+  uploadedFileNames?: string[];
+}
+
+/**
+ * Create a contract record in Supabase and update the parent opportunity's
+ * contract_status to 'rm_review'. Returns the created contract or throws.
+ */
+export async function createContractInDB(
+  input: CreateContractInput
+): Promise<OpportunityContract> {
+  const id = `CR-${Date.now()}`;
+  const today = new Date().toLocaleDateString('en-GB');
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .insert({
+      id,
+      opportunity_id: input.opportunityId,
+      name: input.contractTitle,
+      date: today,
+      status: 'rm_review',
+      contract_type: input.contractType,
+      contract_flow: input.contractFlow,
+      creation_method: input.creationMethod,
+      contract_title: input.contractTitle,
+      review_required_date: input.reviewRequiredDate,
+      msa_linked_id: input.msaLinkedId ?? null,
+      uploaded_file_names: input.uploadedFileNames ?? [],
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create contract:', error);
+    throw new Error(`Failed to create contract: ${error.message}`);
+  }
+
+  // Update the parent opportunity's contract_status
+  const { error: updateError } = await supabase
+    .from('opportunities')
+    .update({ contract_status: 'rm_review' })
+    .eq('id', input.opportunityId);
+
+  if (updateError) {
+    console.error('Failed to update opportunity contract status:', updateError);
+    // Don't throw — the contract was created successfully
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    date: data.date || today,
+    status: 'rm_review' as ContractStatus,
+    contractType: data.contract_type ?? undefined,
+  };
+}
