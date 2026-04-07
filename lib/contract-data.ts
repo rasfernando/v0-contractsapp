@@ -1254,3 +1254,67 @@ export async function getContractByIdFromDB(
     return null;
   }
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH 3c-i — Data layer function only
+// APPEND THIS BLOCK to the bottom of lib/contract-data.ts
+// (right after getContractByIdFromDB)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// This function updates a contract's status in Supabase and returns the
+// updated record. It also updates the parent opportunity's contract_status
+// to keep them in sync.
+//
+// Patch 3c-ii will use this function from the contract page.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Update a contract's status in Supabase. Also updates the parent
+ * opportunity's contract_status field to match. Returns the updated
+ * contract record on success or throws on error.
+ */
+export async function updateContractStatusInDB(
+  contractId: string,
+  newStatus: ContractStatus
+): Promise<FullContractRecord> {
+  // Update the contract status
+  const { data, error } = await supabase
+    .from('contracts')
+    .update({ status: newStatus })
+    .eq('id', contractId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update contract status:', error);
+    throw new Error(`Failed to update contract status: ${error.message}`);
+  }
+
+  // Also update the parent opportunity's contract_status
+  if (data?.opportunity_id) {
+    const { error: oppError } = await supabase
+      .from('opportunities')
+      .update({ contract_status: newStatus })
+      .eq('id', data.opportunity_id);
+
+    if (oppError) {
+      console.error('Failed to update parent opportunity contract status:', oppError);
+      // Don't throw — the contract update succeeded, the parent sync is a nice-to-have
+    }
+  }
+
+  return {
+    id: data.id,
+    opportunityId: data.opportunity_id,
+    name: data.name,
+    date: data.date || '',
+    status: data.status as ContractStatus,
+    contractType: data.contract_type || '',
+    contractFlow: data.contract_flow || '',
+    creationMethod: data.creation_method || '',
+    contractTitle: data.contract_title || data.name || '',
+    reviewRequiredDate: data.review_required_date || '',
+    msaLinkedId: data.msa_linked_id || null,
+    uploadedFileNames: data.uploaded_file_names || [],
+    contractReference: data.contract_reference || data.id,
+  };
+}
