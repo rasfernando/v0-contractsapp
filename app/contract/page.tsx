@@ -3,9 +3,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink, ChevronDown, ChevronUp, Flag, ZoomIn, ZoomOut, FileText, Trash2, Clock, User, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
+import { ArrowLeft, Grid3X3, HelpCircle, ExternalLink, ChevronDown, ChevronUp, Flag, ZoomIn, ZoomOut, FileText, Trash2, Clock, User, AlertTriangle, CheckCircle2, Calendar, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   EXAMPLE_OPPORTUNITY,
   EXAMPLE_CONTRACT,
@@ -15,6 +18,8 @@ import {
   EXAMPLE_FILES,
   EXAMPLE_COMMENTS,
   EXAMPLE_MSA_SUMMARY,
+  INITIAL_DOCS,
+  type ContractDocument,
   getRiskLevelLabel,
   getRiskLevelColor,
   formatCurrency,
@@ -35,7 +40,7 @@ const PIPELINE_STAGES = [
   { id: 'complete',    label: 'Complete',                      done: false },
 ];
 
-const CONTRACT_TABS = ['Overview', 'Documents', 'Review', 'Approve', 'Sign', 'Mitigations', 'History'];
+const CONTRACT_TABS = ['Overview', 'Documconst CONTRACT_TABS = ['Overview', 'Documents', 'Workspaces', 'History'];
 
 // Dynamic contract info based on example data
 const getContractInfoRows = () => [
@@ -819,13 +824,320 @@ function SigningView({
     </div>
   );
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// PASTE THIS BLOCK INTO app/contract/page.tsx
+// Insert immediately before the line: `// ─── Main page component ─────────`
+// (around line 820 in your file)
+// ═══════════════════════════════════════════════════════════════════════════
 
+function DocumentCard({
+  doc,
+  onToggleReview,
+  onSetPrimary,
+}: {
+  doc: ContractDocument;
+  onToggleReview: (id: string) => void;
+  onSetPrimary: (id: string) => void;
+}) {
+  const [showVersions, setShowVersions] = useState(false);
+  const latest = doc.versions[0];
+  const hasVersions = doc.versions.length > 1;
+
+  return (
+    <div className="border border-border rounded-lg bg-white overflow-hidden">
+      <div className="p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-12 rounded bg-gray-100 border border-border flex items-center justify-center flex-shrink-0">
+            <FileText size={20} className="text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <div className="text-sm font-semibold text-[#4a90d9] hover:underline cursor-pointer">
+                  {latest.name}
+                </div>
+                <div className="text-sm font-semibold mt-0.5">Version {latest.v}</div>
+              </div>
+              {doc.primary && (
+                <span className="bg-[#4a90d9] text-white text-[10px] font-bold px-3 py-1 rounded tracking-wide flex-shrink-0">
+                  PRIMARY CONTRACTUAL DOCUMENT
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <div>File type: {doc.type}</div>
+              {latest.size && <div>Size: {latest.size}</div>}
+              {latest.created && <div>Created: {latest.created}</div>}
+              {latest.modified && <div>Modified: {latest.modified}</div>}
+              <div>Uploaded: {latest.uploaded}</div>
+            </div>
+            {!doc.primary && (
+              <div className="mt-4 flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={doc.reviewRequested}
+                    onChange={() => onToggleReview(doc.id)}
+                    className="accent-[#4a90d9]"
+                  />
+                  <span className="text-xs text-foreground">Include in review</span>
+                </label>
+                <button
+                  onClick={() => onSetPrimary(doc.id)}
+                  className="text-xs text-[#4a90d9] font-semibold uppercase tracking-wide hover:underline"
+                >
+                  Make Primary
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {hasVersions && (
+        <>
+          {showVersions && (
+            <div className="border-t border-border bg-gray-50">
+              {doc.versions.slice(1).map((v) => (
+                <div
+                  key={v.v}
+                  className="px-5 py-4 border-b border-border last:border-0 flex items-start gap-4"
+                >
+                  <div className="w-10 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-[#4a90d9] hover:underline cursor-pointer">
+                      {v.name}
+                    </div>
+                    <div className="text-sm font-semibold mt-0.5">Version {v.v}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Uploaded: {v.uploaded}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="px-5 py-3 border-t border-border bg-gray-50 text-right">
+            <button
+              onClick={() => setShowVersions(!showVersions)}
+              className="text-xs text-[#4a90d9] font-semibold uppercase tracking-wide hover:underline"
+            >
+              {showVersions ? 'Hide' : 'Show'} previous versions ({doc.versions.length - 1})
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AddDocumentTray({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void;
+  onAdd: (doc: ContractDocument) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [includeInReview, setIncludeInReview] = useState(false);
+
+  const handleAdd = () => {
+    if (!title || !fileName) return;
+    const now = new Date().toLocaleDateString('en-GB');
+    onAdd({
+      id: `doc-${Date.now()}`,
+      primary: false,
+      name: title,
+      type: 'Docx',
+      reviewRequested: includeInReview,
+      versions: [
+        {
+          v: 1,
+          name: title,
+          size: '1mb',
+          created: now,
+          modified: now,
+          uploaded: now,
+        },
+      ],
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="w-[560px] bg-white flex flex-col shadow-2xl">
+        <div className="px-6 py-5 border-b border-border">
+          <h2 className="text-lg font-semibold">Add a document</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload a supplementary document linked to this contract record.
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          <div>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Document title*
+            </Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. HSBC-1LondonStreet-Insurance"
+              className="mt-1.5 bg-white"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Upload file*
+            </Label>
+            {!fileName ? (
+              <div
+                className="mt-1.5 border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-[#4a90d9] transition-colors"
+                onClick={() => setFileName(title ? `${title}.docx` : 'document.docx')}
+              >
+                <Upload size={22} className="mx-auto mb-3 text-[#4a90d9]" />
+                <p className="text-sm font-medium">Browse to upload</p>
+                <p className="text-xs text-muted-foreground mt-1">File types: docx, PDF. Max: 12mb</p>
+              </div>
+            ) : (
+              <div className="mt-1.5 flex items-center justify-between p-3 border border-border rounded">
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className="text-muted-foreground" />
+                  <span className="text-sm text-[#4a90d9]">{fileName}</span>
+                </div>
+                <button onClick={() => setFileName('')}>
+                  <X size={14} className="text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="pt-2 border-t border-border">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeInReview}
+                onChange={(e) => setIncludeInReview(e.target.checked)}
+                className="mt-0.5 accent-[#4a90d9]"
+              />
+              <div>
+                <div className="text-sm font-medium">Include in contract review</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  By default only the primary contract document is reviewed. Tick this to include
+                  this supplementary document in the review workflow.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div className="border-t border-border px-6 py-4 flex justify-between">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAdd}
+            disabled={!title || !fileName}
+            className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white disabled:opacity-40"
+          >
+            Add document
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DocumentsView({
+  docs,
+  setDocs,
+  canEdit,
+}: {
+  docs: ContractDocument[];
+  setDocs: React.Dispatch<React.SetStateAction<ContractDocument[]>>;
+  canEdit: boolean;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+
+  const toggleReview = (id: string) =>
+    setDocs((prev) => prev.map((d) => (d.id === id ? { ...d, reviewRequested: !d.reviewRequested } : d)));
+
+  const setPrimary = (id: string) =>
+    setDocs((prev) =>
+      prev.map((d) => ({
+        ...d,
+        primary: d.id === id,
+        reviewRequested: d.id === id ? true : d.reviewRequested,
+      }))
+    );
+
+  const addDoc = (newDoc: ContractDocument) => setDocs((prev) => [...prev, newDoc]);
+
+  const primaryDoc = docs.find((d) => d.primary);
+  const supplementaryDocs = docs.filter((d) => !d.primary);
+  const reviewCount = docs.filter((d) => d.reviewRequested).length;
+
+  return (
+    <main className="flex-1 p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#4a90d9] flex items-center justify-center flex-shrink-0">
+            <FileText size={16} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-semibold">
+              {reviewCount} document{reviewCount !== 1 ? 's' : ''} marked for review
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              The primary contract document is reviewed by default. Additional supplementary documents can be included by ticking &quot;Include in review&quot;.
+            </div>
+          </div>
+        </div>
+
+        <Card className="bg-white border border-border">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Documents
+            </h3>
+            {canEdit && (
+              <button
+                onClick={() => setAddOpen(true)}
+                className="text-xs font-semibold text-[#4a90d9] uppercase tracking-wide hover:underline"
+              >
+                + Add Document
+              </button>
+            )}
+          </div>
+          <div className="p-5 space-y-4 bg-gray-50">
+            {primaryDoc && (
+              <DocumentCard doc={primaryDoc} onToggleReview={toggleReview} onSetPrimary={setPrimary} />
+            )}
+            {supplementaryDocs.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                doc={doc}
+                onToggleReview={toggleReview}
+                onSetPrimary={setPrimary}
+              />
+            ))}
+            {docs.length === 0 && (
+              <div className="text-center py-12 bg-white rounded border border-dashed border-border">
+                <FileText size={32} className="text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+      {addOpen && <AddDocumentTray onClose={() => setAddOpen(false)} onAdd={addDoc} />}
+    </main>
+  );
+}
 // ─── Main page component ──────────────────────────────────────────────────────
 
 export default function ContractPage() {
   const router = useRouter();
   const { currentUser } = useUser();
   const [activeTab, setActiveTab] = useState('Overview');
+  const [docs, setDocs] = useState<ContractDocument[]>(INITIAL_DOCS);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [expandedClause, setExpandedClause] = useState<number | null>(1);
   const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
@@ -846,6 +1158,7 @@ export default function ContractPage() {
   const canApprove = canApproveContract(currentUser.role);
   const canSign = canSignContract(currentUser.role);
   const canNegotiate = canNegotiateContract(currentUser.role);
+  const canEditDocs = currentUser.role === 'opportunity_manager';
 
   const handleStartReview = () => { setIsReviewing(true); setActiveTab('Review'); };
   const handleMarkAsReviewed = () => { setReviewComplete(true); setIsReviewing(false); };
@@ -1366,6 +1679,21 @@ export default function ContractPage() {
         <PipelineBar activeStageId="contract_preparation" />
       </div>
 
+      {activeTab === 'Documents' ? (
+        <DocumentsView docs={docs} setDocs={setDocs} canEdit={canEditDocs} />
+      ) : activeTab === 'Workspaces' ? (
+        <main className="flex-1 p-6">
+          <div className="max-w-4xl mx-auto bg-white border border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
+            Workspaces — use &quot;Start review&quot; from the Overview tab to begin a review workflow.
+          </div>
+        </main>
+      ) : activeTab === 'History' ? (
+        <main className="flex-1 p-6">
+          <div className="max-w-4xl mx-auto bg-white border border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
+            History — audit trail coming next.
+          </div>
+        </main>
+      ) : (
       <main className="flex-1 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-3 gap-6">
@@ -1468,6 +1796,7 @@ export default function ContractPage() {
           </div>
         </div>
       </main>
+      )}
 
       <AppFooter />
 
