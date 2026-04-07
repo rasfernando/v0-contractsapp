@@ -1022,3 +1022,100 @@ export async function createOpportunityInDB(input: {
     contracts: [],
   };
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH 2 — PART 2
+// APPEND THIS FUNCTION to the bottom of lib/contract-data.ts
+// (right after createOpportunityInDB)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Input shape for creating a risk assessment. All fields are optional
+ * except opportunityId and name — the wizard validates before calling.
+ */
+export interface CreateRiskAssessmentInput {
+  opportunityId: string;
+  name: string;
+  serviceType?: string;
+  projectScope?: string;
+  startDate?: string;
+  endDate?: string;
+  jointVenture?: boolean;
+  cbreReferred?: boolean;
+  estimatedFee?: string;
+  margin?: string;
+  probabilityOfWinning?: string;
+  proposalDate?: string;
+  boundaries?: string;
+  riskGuidanceReviewed?: boolean;
+  riskCategories?: string[];
+  otherText?: string;
+  note?: string;
+  riskScore?: number;
+}
+
+/**
+ * Create a risk assessment in Supabase and update the parent
+ * opportunity's risk_assessment_status to 'awaiting_approval'.
+ * Returns the created risk assessment or throws on error.
+ */
+export async function createRiskAssessmentInDB(
+  input: CreateRiskAssessmentInput
+): Promise<OpportunityRiskAssessment> {
+  const id = `RA-${Date.now()}`;
+  const today = new Date().toLocaleDateString('en-GB');
+
+  // Insert the risk assessment
+  const { data, error } = await supabase
+    .from('risk_assessments')
+    .insert({
+      id,
+      opportunity_id: input.opportunityId,
+      name: input.name,
+      date: today,
+      status: 'awaiting_approval',
+      risk_score: input.riskScore ?? null,
+      service_type: input.serviceType ?? 'Project Management',
+      project_scope: input.projectScope ?? null,
+      start_date: input.startDate ?? null,
+      end_date: input.endDate ?? null,
+      joint_venture: input.jointVenture ?? false,
+      cbre_referred: input.cbreReferred ?? false,
+      estimated_fee: input.estimatedFee ?? null,
+      margin: input.margin ?? null,
+      probability_of_winning: input.probabilityOfWinning ?? null,
+      proposal_date: input.proposalDate ?? null,
+      boundaries: input.boundaries ?? null,
+      risk_guidance_reviewed: input.riskGuidanceReviewed ?? false,
+      risk_categories: input.riskCategories ?? [],
+      other_text: input.otherText ?? null,
+      note: input.note ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create risk assessment:', error);
+    throw new Error(`Failed to create risk assessment: ${error.message}`);
+  }
+
+  // Update the parent opportunity's status to 'awaiting_approval'
+  const { error: updateError } = await supabase
+    .from('opportunities')
+    .update({ risk_assessment_status: 'awaiting_approval' })
+    .eq('id', input.opportunityId);
+
+  if (updateError) {
+    console.error('Failed to update opportunity status:', updateError);
+    // Don't throw — the risk assessment was created successfully,
+    // the status update is a nice-to-have
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    date: data.date || today,
+    status: 'awaiting_approval' as RiskAssessmentStatus,
+    riskScore: data.risk_score ?? undefined,
+    serviceType: data.service_type ?? undefined,
+  };
+}
