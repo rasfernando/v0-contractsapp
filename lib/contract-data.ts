@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 // ─── Types based on data structure diagram ─────────────────────────────────────
 
 export interface OpportunityRecord {
@@ -804,3 +806,76 @@ export const INITIAL_DOCS: ContractDocument[] = [
     ],
   },
 ];
+// ═══════════════════════════════════════════════════════════════════════════
+// APPEND THIS BLOCK TO THE BOTTOM OF lib/contract-data.ts
+// (after the formatDate function at the very end of the file)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Import the Supabase client at the top of the file if not already imported.
+// Add this line near the top of lib/contract-data.ts with your other imports:
+//
+//     import { supabase } from './supabase';
+//
+// Then paste the function below at the very end of the file.
+
+/**
+ * Load all opportunities from Supabase, including their nested
+ * risk assessments and contracts. Returns an empty array on error
+ * so the caller can fall back to hardcoded data if needed.
+ */
+export async function getAllOpportunitiesFromDB(): Promise<OpportunityRow[]> {
+  try {
+    const { data: opps, error: oppsError } = await supabase
+      .from('opportunities')
+      .select('*')
+      .order('created_at');
+
+    if (oppsError) {
+      console.error('Supabase opportunities error:', oppsError);
+      return [];
+    }
+    if (!opps || opps.length === 0) return [];
+
+    const { data: allRas } = await supabase.from('risk_assessments').select('*');
+    const { data: allCts } = await supabase.from('contracts').select('*');
+
+    return opps.map((o: any) => ({
+      id: o.id,
+      name: o.name,
+      reference: o.reference,
+      manager: o.manager || '',
+      managerInitials: o.manager_initials || '',
+      director: o.director || '',
+      directorInitials: o.director_initials || '',
+      client: o.client,
+      clientInitials: o.client_initials || '',
+      address: o.address || '',
+      city: o.city || '',
+      country: o.country || '',
+      riskAssessmentStatus: o.risk_assessment_status as RiskAssessmentStatus,
+      contractStatus: o.contract_status as ContractStatus,
+      riskAssessments: (allRas || [])
+        .filter((r: any) => r.opportunity_id === o.id)
+        .map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          date: r.date || '',
+          status: r.status as RiskAssessmentStatus,
+          riskScore: r.risk_score ?? undefined,
+          serviceType: r.service_type ?? undefined,
+        })),
+      contracts: (allCts || [])
+        .filter((c: any) => c.opportunity_id === o.id)
+        .map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          date: c.date || '',
+          status: c.status as ContractStatus,
+          contractType: c.contract_type ?? undefined,
+        })),
+    }));
+  } catch (err) {
+    console.error('Supabase connection error:', err);
+    return [];
+  }
+}
