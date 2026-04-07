@@ -1138,7 +1138,6 @@ export default function ContractPage() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [docs, setDocs] = useState<ContractDocument[]>(INITIAL_DOCS);
   const [isReviewing, setIsReviewing] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false);
   const [expandedClause, setExpandedClause] = useState<number | null>(1);
   const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
   const [reviewComplete, setReviewComplete] = useState(false);
