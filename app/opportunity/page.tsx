@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   getOpportunityById,
+  getOpportunityByIdFromDB,
   OPPORTUNITY_ROWS,
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
@@ -870,25 +871,52 @@ function OpportunityPageContent() {
   const searchParams = useSearchParams();
   const opportunityId = searchParams.get('id') || 'OPP-001';
   const { currentUser } = useUser();
-  
+
   const [isRiskSheetOpen, setIsRiskSheetOpen] = useState(false);
   const [isContractSheetOpen, setIsContractSheetOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  
+
   // Permission checks based on role
   const canCreate = canCreateOpportunity(currentUser.role);
   const canCreateContracts = canCreateContract(currentUser.role);
-  
-  // Get the opportunity data
-  const opportunity = getOpportunityById(opportunityId) || OPPORTUNITY_ROWS[0];
-  const [riskAssessments, setRiskAssessments] = useState<OpportunityRiskAssessment[]>(opportunity.riskAssessments);
-  const [contracts, setContracts] = useState<OpportunityContract[]>(opportunity.contracts);
-  
-  // Update data when opportunity changes
+
+  // Opportunity state — loaded async from Supabase with hardcoded fallback
+  const [opportunity, setOpportunity] = useState<OpportunityRow | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [riskAssessments, setRiskAssessments] = useState<OpportunityRiskAssessment[]>([]);
+  const [contracts, setContracts] = useState<OpportunityContract[]>([]);
+
   useEffect(() => {
-    setRiskAssessments(opportunity.riskAssessments);
-    setContracts(opportunity.contracts);
-  }, [opportunity]);
+    let cancelled = false;
+    setIsLoading(true);
+
+    getOpportunityByIdFromDB(opportunityId)
+      .then((data) => {
+        if (cancelled) return;
+        if (data) {
+          setOpportunity(data);
+          setRiskAssessments(data.riskAssessments);
+          setContracts(data.contracts);
+        } else {
+          // Fall back to hardcoded data if not found in Supabase
+          const fallback = getOpportunityById(opportunityId) || OPPORTUNITY_ROWS[0];
+          setOpportunity(fallback);
+          setRiskAssessments(fallback.riskAssessments);
+          setContracts(fallback.contracts);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const fallback = getOpportunityById(opportunityId) || OPPORTUNITY_ROWS[0];
+        setOpportunity(fallback);
+        setRiskAssessments(fallback.riskAssessments);
+        setContracts(fallback.contracts);
+        setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [opportunityId]);
 
   // Hide success message after 5 seconds
   useEffect(() => {
@@ -898,6 +926,15 @@ function OpportunityPageContent() {
     }
   }, [showSuccess]);
   
+ // Show loading state while fetching from Supabase
+  if (isLoading || !opportunity) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading opportunity...</div>
+      </div>
+    );
+  }
+
   // Determine next step based on risk assessment status
   const needsRiskAssessment = opportunity.riskAssessmentStatus === 'required' || opportunity.riskAssessmentStatus === 'in_progress';
   const riskAwaitingApproval = opportunity.riskAssessmentStatus === 'awaiting_approval';
