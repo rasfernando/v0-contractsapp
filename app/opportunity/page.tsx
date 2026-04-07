@@ -11,6 +11,7 @@ import {
   getOpportunityById,
   getOpportunityByIdFromDB,
   createRiskAssessmentInDB,
+  createContractInDB,
   OPPORTUNITY_ROWS,
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
@@ -20,6 +21,7 @@ import type {
   OpportunityRiskAssessment,
   OpportunityContract,
   CreateRiskAssessmentInput,
+  CreateContractInput,
 } from '@/lib/contract-data';
 import { useUser, canCreateContract, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
 import { UserSwitcher } from '@/components/user-switcher';
@@ -471,7 +473,21 @@ const DOWNSTREAM_TYPES = [
   { id: 'supplier_nda',     label: 'Supplier NDA',                               desc: 'A Non-Disclosure or confidentiality Agreement used solely to govern confidentiality and information sharing between T&T and the proposed supplier contract party, with no services or fees attached.' },
 ];
 
-function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
+function ContractCreateSheet({
+  onClose,
+  onComplete,
+}: {
+  onClose: () => void;
+  onComplete: (data: {
+    contractFlow: 'client' | 'supplier';
+    contractType: string;
+    contractTitle: string;
+    reviewDate: string;
+    creationMethod: 'builder' | 'upload';
+    msaLinked: boolean;
+    uploadedFiles: string[];
+  }) => void;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<ContractStep>('contract_flow');
 
@@ -889,10 +905,39 @@ function ContractCreateSheet({ onClose, onComplete }: { onClose: () => void; onC
                 <Button variant="outline" className="border-border text-foreground text-sm">
                   Save as draft
                 </Button>
-                <Button variant="outline" className="border-border text-foreground text-sm" onClick={() => { onComplete(); onClose(); }}>
+                <Button
+                  variant="outline"
+                  className="border-border text-foreground text-sm"
+                  onClick={() => {
+                    onComplete({
+                      contractFlow: contractFlow || 'client',
+                      contractType: contractType || '',
+                      contractTitle,
+                      reviewDate,
+                      creationMethod: creationMethod || 'upload',
+                      msaLinked,
+                      uploadedFiles,
+                    });
+                    onClose();
+                  }}
+                >
                   Create Record
                 </Button>
-                <Button onClick={() => { onComplete(); onClose(); }} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white text-sm">
+                <Button
+                  onClick={() => {
+                    onComplete({
+                      contractFlow: contractFlow || 'client',
+                      contractType: contractType || '',
+                      contractTitle,
+                      reviewDate,
+                      creationMethod: creationMethod || 'upload',
+                      msaLinked,
+                      uploadedFiles,
+                    });
+                    onClose();
+                  }}
+                  className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white text-sm"
+                >
                   Create Record &amp; Submit for Review
                 </Button>
               </>
@@ -1421,16 +1466,27 @@ function OpportunityPageContent() {
       {isContractSheetOpen && (
         <ContractCreateSheet
           onClose={() => setIsContractSheetOpen(false)}
-          onComplete={() => {
-            const newContract: OpportunityContract = {
-              id: `CR-NEW-${Date.now()}`,
-              name: `${opportunity.client} Contract`,
-              date: new Date().toLocaleDateString('en-GB'),
-              status: 'preparation',
-              contractType: 'Standalone',
-            };
-            setContracts(prev => [...prev, newContract]);
-            setShowSuccess(true);
+          onComplete={async (data) => {
+            try {
+              const newContract = await createContractInDB({
+                opportunityId: opportunity.id,
+                contractFlow: data.contractFlow,
+                contractType: data.contractType,
+                contractTitle: data.contractTitle || `${opportunity.client} Contract`,
+                reviewRequiredDate: data.reviewDate,
+                creationMethod: data.creationMethod,
+                uploadedFileNames: data.uploadedFiles,
+              });
+              setContracts(prev => [...prev, newContract]);
+              // Update the parent opportunity's contract status in local state
+              setOpportunity(prev =>
+                prev ? { ...prev, contractStatus: 'rm_review' } : prev
+              );
+              setShowSuccess(true);
+            } catch (err) {
+              console.error('Failed to create contract:', err);
+              alert('Failed to create contract. Please try again.');
+            }
           }}
         />
       )}
