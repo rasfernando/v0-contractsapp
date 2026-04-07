@@ -1709,8 +1709,8 @@ function ContractPageContent() {
         <div className="bg-[#1e2a5e] border-t border-white/10 px-4 py-2 flex items-center gap-3">
           <button onClick={() => router.back()} className="hover:bg-white/10 rounded p-1"><ArrowLeft size={16} /></button>
           <div>
-            <div className="text-sm font-semibold">{EXAMPLE_OPPORTUNITY.opportunityName.toUpperCase()} – {EXAMPLE_OPPORTUNITY.opportunityReference.split('-').pop()}</div>
-            <div className="text-xs text-white/60">CONTRACT: {EXAMPLE_CONTRACT.crReference}</div>
+            <div className="text-sm font-semibold">{(opportunity?.name || EXAMPLE_OPPORTUNITY.opportunityName).toUpperCase()} – {(opportunity?.reference || EXAMPLE_OPPORTUNITY.opportunityReference).split('-').pop()}</div>
+            <div className="text-xs text-white/60">CONTRACT: {contract?.contractReference || EXAMPLE_CONTRACT.crReference}</div>
           </div>
         </div>
         <div className="flex gap-0 border-t border-white/10 px-4">
