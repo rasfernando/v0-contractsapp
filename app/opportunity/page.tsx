@@ -1312,7 +1312,7 @@ function OpportunityPageContent() {
                     return (
                       <div
                         key={c.id}
-                        onClick={() => router.push('/contract')}
+                        onClick={() => router.push(`/contract?id=${c.id}`)}
                         className="flex items-center justify-between p-3 border border-border rounded hover:bg-gray-50 transition-colors cursor-pointer"
                       >
                         <div>
