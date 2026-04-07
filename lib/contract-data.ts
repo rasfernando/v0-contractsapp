@@ -879,3 +879,146 @@ export async function getAllOpportunitiesFromDB(): Promise<OpportunityRow[]> {
     return [];
   }
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// PART 1 OF PATCH 1
+// APPEND THESE TWO FUNCTIONS to the bottom of lib/contract-data.ts
+// (right after the existing getAllOpportunitiesFromDB function)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Load a single opportunity by ID from Supabase, including its nested
+ * risk assessments and contracts. Returns null if not found or on error.
+ */
+export async function getOpportunityByIdFromDB(id: string): Promise<OpportunityRow | null> {
+  try {
+    const { data: opp, error: oppError } = await supabase
+      .from('opportunities')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (oppError) {
+      console.error('Supabase opportunity lookup error:', oppError);
+      return null;
+    }
+    if (!opp) return null;
+
+    const { data: ras } = await supabase
+      .from('risk_assessments')
+      .select('*')
+      .eq('opportunity_id', id);
+
+    const { data: cts } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('opportunity_id', id);
+
+    return {
+      id: opp.id,
+      name: opp.name,
+      reference: opp.reference,
+      manager: opp.manager || '',
+      managerInitials: opp.manager_initials || '',
+      director: opp.director || '',
+      directorInitials: opp.director_initials || '',
+      client: opp.client,
+      clientInitials: opp.client_initials || '',
+      address: opp.address || '',
+      city: opp.city || '',
+      country: opp.country || '',
+      riskAssessmentStatus: opp.risk_assessment_status as RiskAssessmentStatus,
+      contractStatus: opp.contract_status as ContractStatus,
+      riskAssessments: (ras || []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        date: r.date || '',
+        status: r.status as RiskAssessmentStatus,
+        riskScore: r.risk_score ?? undefined,
+        serviceType: r.service_type ?? undefined,
+      })),
+      contracts: (cts || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        date: c.date || '',
+        status: c.status as ContractStatus,
+        contractType: c.contract_type ?? undefined,
+      })),
+    };
+  } catch (err) {
+    console.error('Supabase connection error:', err);
+    return null;
+  }
+}
+
+/**
+ * Create a new opportunity in Supabase. Returns the created opportunity
+ * or throws an error if something goes wrong. The caller is responsible
+ * for handling errors.
+ */
+export async function createOpportunityInDB(input: {
+  name: string;
+  country: string;
+  client: string;
+  director: string;
+  manager: string;
+  city?: string;
+  address?: string;
+}): Promise<OpportunityRow> {
+  // Generate a unique ID based on timestamp
+  const id = `OPP-${Date.now()}`;
+  const reference = `OPP-${new Date().getFullYear()}-${Date.now().toString().slice(-7)}`;
+
+  const initials = (s: string) =>
+    s
+      .split(' ')
+      .map((w) => w[0])
+      .filter(Boolean)
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+  const { data, error } = await supabase
+    .from('opportunities')
+    .insert({
+      id,
+      name: input.name,
+      reference,
+      manager: input.manager,
+      manager_initials: initials(input.manager),
+      director: input.director,
+      director_initials: initials(input.director),
+      client: input.client,
+      client_initials: initials(input.client),
+      address: input.address || '',
+      city: input.city || '',
+      country: input.country,
+      risk_assessment_status: 'required',
+      contract_status: null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create opportunity:', error);
+    throw new Error(`Failed to create opportunity: ${error.message}`);
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    reference: data.reference,
+    manager: data.manager || '',
+    managerInitials: data.manager_initials || '',
+    director: data.director || '',
+    directorInitials: data.director_initials || '',
+    client: data.client,
+    clientInitials: data.client_initials || '',
+    address: data.address || '',
+    city: data.city || '',
+    country: data.country || '',
+    riskAssessmentStatus: data.risk_assessment_status as RiskAssessmentStatus,
+    contractStatus: data.contract_status as ContractStatus,
+    riskAssessments: [],
+    contracts: [],
+  };
+}
