@@ -21,6 +21,8 @@ import {
   INITIAL_DOCS,
   getContractByIdFromDB,
   getOpportunityByIdFromDB,
+  updateContractStatusInDB,
+  type ContractStatus,
   getRiskLevelLabel,
   getRiskLevelColor,
   formatCurrency,
@@ -105,6 +107,25 @@ const DOCUMENT_PARAGRAPHS = [
 ];
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
+
+// Fixed-position toast that surfaces failed status transitions. Rendered at
+// the bottom of every workflow view so the user sees the error regardless of
+// which view they were on when the DB write failed.
+function StatusErrorToast({ message, onDismiss }: { message: string | null; onDismiss: () => void }) {
+  if (!message) return null;
+  return (
+    <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 flex items-start gap-3">
+      <AlertTriangle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
+      <div className="flex-1">
+        <div className="text-sm font-semibold text-red-800 mb-0.5">Status update failed</div>
+        <div className="text-xs text-red-700">{message}</div>
+      </div>
+      <button onClick={onDismiss} className="text-red-600 hover:text-red-800 flex-shrink-0">
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
 
 function AppHeader({
   breadcrumb,
@@ -1156,13 +1177,17 @@ function ContractPageContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('Overview');
+  // isReviewing is the only remaining local UI flag — it controls whether the
+  // document viewer is open. The workflow view (negotiation/approval/signing/etc.)
+  // is derived from contract.status below.
   const [isReviewing, setIsReviewing] = useState(false);
   const [expandedClause, setExpandedClause] = useState<number | null>(1);
   const [reviewSubTab, setReviewSubTab] = useState<'details' | 'guardrails'>('guardrails');
-  const [reviewComplete, setReviewComplete] = useState(false);
-  const [isNegotiating, setIsNegotiating] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
-  const [isSigning, setIsSigning] = useState(false);
+  // Optimistic-update tracking for status transitions. pendingStatus shadows
+  // contract.status while a DB write is in flight; on failure it clears and
+  // statusError surfaces the problem to the user.
+  const [pendingStatus, setPendingStatus] = useState<ContractStatus>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [approvalAction, setApprovalAction] = useState<'request-info' | 'reject' | null>(null);
   const [approvalExplanation, setApprovalExplanation] = useState('');
   const [showApprovalTray, setShowApprovalTray] = useState(false);
@@ -1207,17 +1232,53 @@ function ContractPageContent() {
   const canNegotiate = canNegotiateContract(currentUser.role);
   const canEditDocs = currentUser.role === 'opportunity_manager';
 
+  // ── Workflow status helpers ────────────────────────────────────────────────
+  // Derived view: pendingStatus (optimistic) takes precedence over the
+  // persisted contract.status. This means the UI flips immediately on click,
+  // and only snaps back if the DB write fails.
+  const effectiveStatus: ContractStatus = pendingStatus ?? contract?.status ?? null;
+
+  // Single transition helper used by every workflow button. Optimistically
+  // updates the UI, calls Supabase, and rolls back on failure.
+  const transitionTo = async (next: ContractStatus) => {
+    if (!contract) return;
+    setStatusError(null);
+    setPendingStatus(next);
+    try {
+      const updated = await updateContractStatusInDB(contract.id, next);
+      setContract(updated);
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : 'Failed to update contract status');
+    } finally {
+      setPendingStatus(null);
+    }
+  };
+
   const handleStartReview = () => { setIsReviewing(true); setActiveTab('Review'); };
-  const handleMarkAsReviewed = () => { setReviewComplete(true); setIsReviewing(false); };
-  const handleReviewComplete = () => { setIsNegotiating(true); setReviewComplete(false); };
-  const handleSubmitForApproval = () => { setIsNegotiating(false); setIsApproving(true); };
-  
+  // "Mark as reviewed" inside the document viewer transitions straight to
+  // negotiation. The previous "review summary" intermediate screen has been
+  // collapsed — recover from git history if you need to restore it.
+  const handleMarkAsReviewed = () => { setIsReviewing(false); transitionTo('negotiation'); };
+  const handleSubmitForApproval = () => { transitionTo('approval'); };
+
   const handleRequestInfo = () => { setApprovalAction('request-info'); setShowApprovalTray(true); };
   const handleReject = () => { setApprovalAction('reject'); setShowApprovalTray(true); };
-  const handleApprove = () => { setIsApproving(false); setIsSigning(true); };
-  const handleSubmitExplanation = () => { setShowApprovalTray(false); };
+  const handleApprove = () => { transitionTo('signing'); };
+  // Submitting the rejection explanation is what actually persists the rejected
+  // status. The explanation itself is not yet persisted — TODO: add an
+  // explanation column / audit trail in a follow-up patch.
+  const handleSubmitExplanation = () => {
+    setShowApprovalTray(false);
+    if (approvalAction === 'reject') {
+      transitionTo('rejected');
+    }
+  };
   const handleClearApprovalAction = () => { setApprovalAction(null); setApprovalExplanation(''); };
-  const handleSignContract = () => { setIsSigning(false); /* Move to next stage */ };
+  // Signing transitions to 'active'. The downstream key-deal-summary and
+  // commission-setup stages exist in PIPELINE_STAGES but not in ContractStatus
+  // — that pipeline-vs-status mismatch is pre-existing tech debt.
+  const handleSignContract = () => { transitionTo('active'); };
+  const handleCancelSigning = () => { transitionTo('approval'); };
 
   const handleOpenUploadModal = () => {
     setShowUploadModal(true);
@@ -1237,7 +1298,7 @@ function ContractPageContent() {
 
   const handleAddVersion = () => {
     if (nextAction === 'approval') {
-      setIsNegotiating(false);
+      transitionTo('approval');
       setActiveTab('Overview');
     } else if (nextAction === 're-review') {
       setIsReviewing(true);
@@ -1375,98 +1436,66 @@ function ContractPageContent() {
           </div>
         </main>
 
-        <AppFooter />
+        <StatusErrorToast message={statusError} onDismiss={() => setStatusError(null)} />
+      <AppFooter />
       </div>
     );
   }
 
-  // ── Review Summary View ───────────────────────────────────────────────────
-  if (reviewComplete && activeTab === 'Review') {
+  // ── Rejected View ─────────────────────────────────────────────────────────
+  // Terminal state for now — no outgoing transitions. A "reopen" action can be
+  // added in a follow-up patch if business requires it.
+  if (effectiveStatus === 'rejected') {
     return (
       <div className="min-h-screen flex flex-col bg-background font-sans">
         <AppHeader
-          tabs={['Overview', 'Documents', 'History']}
+          tabs={CONTRACT_TABS}
           activeTab={activeTab}
-          onTabChange={(tab) => { setActiveTab(tab); setReviewComplete(false); }}
+          onTabChange={setActiveTab}
           contract={contract}
           opportunity={opportunity}
         />
 
         <div className="bg-white border-b border-border px-6 py-3">
-          <PipelineBar activeStageId="rm_review" />
+          <PipelineBar activeStageId="approval" />
         </div>
 
         <main className="flex-1 p-6 bg-gray-50">
-          <div className="max-w-6xl mx-auto space-y-6">
-            <Card className="bg-white border border-border p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground mb-1">Mark as Reviewed</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Next action: The contract is being reviewed by{' '}
-                    <span className="text-[#4a90d9]">James Seddon</span>. Once complete, the contract can enter negotiation.
-                  </p>
+          <div className="max-w-4xl mx-auto">
+            <Card className="bg-white border border-red-200 p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="text-red-600" size={20} />
                 </div>
-                {canReview ? (
-                  <Button onClick={handleReviewComplete} className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white whitespace-nowrap">
-                    Review Complete
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Contract rejected</h2>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    This contract was rejected during the approval stage. No further
+                    workflow actions are available.
+                  </p>
+                  <p className="text-xs text-muted-foreground italic">
                     Viewing as {getRoleLabel(currentUser.role)}
                   </p>
-                )}
+                </div>
               </div>
             </Card>
-
-            <div className="grid grid-cols-3 gap-6">
-              <div className="space-y-4">
-                <RiskSummaryCard />
-                <RiskReviewCard />
-              </div>
-              <div className="col-span-2">
-                <Card className="bg-white border border-border">
-                  <div className="p-4 border-b border-border flex items-center justify-between">
-                    <div className="flex gap-6">
-                      <button className="text-sm font-semibold text-foreground">REVIEW</button>
-                      <button className="text-sm font-semibold text-muted-foreground">DETAILS</button>
-                    </div>
-                    <Button className="bg-[#4a90d9] hover:bg-[#3a7fc9] text-white text-sm">View Contract</Button>
-                  </div>
-                  <div className="flex gap-6 px-4 border-b border-border">
-                    <button
-                      onClick={() => setReviewSubTab('details')}
-                      className={`py-3 text-sm transition-colors ${reviewSubTab === 'details' ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium' : 'text-muted-foreground'}`}
-                    >
-                      Contract details
-                    </button>
-                    <button
-                      onClick={() => setReviewSubTab('guardrails')}
-                      className={`py-3 text-sm transition-colors ${reviewSubTab === 'guardrails' ? 'text-[#4a90d9] border-b-2 border-[#4a90d9] font-medium' : 'text-muted-foreground'}`}
-                    >
-                      Guardrails &amp; Mitigations
-                    </button>
-                  </div>
-                  <GuardrailsPanel expandedClause={expandedClause} setExpandedClause={setExpandedClause} />
-                </Card>
-              </div>
-            </div>
           </div>
         </main>
 
-        <AppFooter />
+        <StatusErrorToast message={statusError} onDismiss={() => setStatusError(null)} />
+      <AppFooter />
       </div>
     );
   }
 
   // ── Negotiation View ──────────────────────────────────────────────────────
-  if (isNegotiating) {
+  if (effectiveStatus === 'negotiation') {
     return (
       <div className="min-h-screen flex flex-col bg-background font-sans">
         <AppHeader
           tabs={['Overview', 'Documents', 'History']}
           activeTab={activeTab}
-          onTabChange={(tab) => { setActiveTab(tab); setIsNegotiating(false); }}
+          onTabChange={(tab) => { setActiveTab(tab); }}
           contract={contract}
           opportunity={opportunity}
         />
@@ -1538,7 +1567,8 @@ function ContractPageContent() {
           </div>
         </main>
 
-        <AppFooter />
+        <StatusErrorToast message={statusError} onDismiss={() => setStatusError(null)} />
+      <AppFooter />
 
         {showUploadModal && <UploadTray {...uploadTrayProps} />}
       </div>
@@ -1546,7 +1576,7 @@ function ContractPageContent() {
   }
 
   // ── Approval View ─────────────────────────────────────────────────────────
-  if (isApproving) {
+  if (effectiveStatus === 'approval') {
     const approvalIndex = PIPELINE_STAGES.findIndex(s => s.id === 'approval');
     return (
       <div className="min-h-screen flex flex-col bg-background font-sans">
@@ -1660,7 +1690,8 @@ function ContractPageContent() {
           </div>
         </main>
 
-        <AppFooter />
+        <StatusErrorToast message={statusError} onDismiss={() => setStatusError(null)} />
+      <AppFooter />
 
         {showApprovalTray && approvalAction && (
           <ApprovalExplanationTray
@@ -1676,8 +1707,8 @@ function ContractPageContent() {
   }
 
   // ── Signing View ──────────────────────────────────────────────────────────
-  if (isSigning) {
-    return <SigningView onSign={handleSignContract} onCancel={() => setIsSigning(false)} canSign={canSign} roleName={getRoleLabel(currentUser.role)} />;
+  if (effectiveStatus === 'signing') {
+    return <SigningView onSign={handleSignContract} onCancel={handleCancelSigning} canSign={canSign} roleName={getRoleLabel(currentUser.role)} />;
   }
 
   // ── Default Overview View ─────────────────────────────────────────────────
@@ -1851,6 +1882,7 @@ function ContractPageContent() {
       </main>
       )}
 
+      <StatusErrorToast message={statusError} onDismiss={() => setStatusError(null)} />
       <AppFooter />
 
       {showUploadModal && <UploadTray {...uploadTrayProps} />}
