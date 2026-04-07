@@ -1189,3 +1189,68 @@ export async function createContractInDB(
     contractType: data.contract_type ?? undefined,
   };
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH 3b — PART 2
+// APPEND THIS BLOCK to the bottom of lib/contract-data.ts
+// (right after createContractInDB)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Full contract record loaded from Supabase, including all the fields
+ * captured during contract creation. Used by the contract overview page.
+ */
+export interface FullContractRecord {
+  id: string;
+  opportunityId: string;
+  name: string;
+  date: string;
+  status: ContractStatus;
+  contractType: string;
+  contractFlow: string;
+  creationMethod: string;
+  contractTitle: string;
+  reviewRequiredDate: string;
+  msaLinkedId: string | null;
+  uploadedFileNames: string[];
+  contractReference: string;
+}
+
+/**
+ * Load a single contract by ID, or null if not found / on error.
+ */
+export async function getContractByIdFromDB(
+  id: string
+): Promise<FullContractRecord | null> {
+  try {
+    const { data, error } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Supabase contract lookup error:', error);
+      return null;
+    }
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      opportunityId: data.opportunity_id,
+      name: data.name,
+      date: data.date || '',
+      status: data.status as ContractStatus,
+      contractType: data.contract_type || '',
+      contractFlow: data.contract_flow || '',
+      creationMethod: data.creation_method || '',
+      contractTitle: data.contract_title || data.name || '',
+      reviewRequiredDate: data.review_required_date || '',
+      msaLinkedId: data.msa_linked_id || null,
+      uploadedFileNames: data.uploaded_file_names || [],
+      contractReference: data.contract_reference || data.id,
+    };
+  } catch (err) {
+    console.error('Supabase connection error:', err);
+    return null;
+  }
+}
