@@ -1,7 +1,7 @@
 // Dashboard — role-filtered tasks via userTasks
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, HelpCircle, Flag, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,10 @@ import {
 } from '@/components/ui/select';
 import {
   OPPORTUNITY_ROWS,
+  getAllOpportunitiesFromDB,
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
+  type OpportunityRow,
 } from '@/lib/contract-data';
 import { useUser, canCreateOpportunity, getRoleLabel } from '@/lib/user-context';
 import { UserSwitcher } from '@/components/user-switcher';
@@ -248,12 +250,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const { currentUser } = useUser();
   const [activeTab, setActiveTab] = useState<'tasks' | 'engagements'>('tasks');
+  const [opportunities, setOpportunities] = useState<OpportunityRow[]>(OPPORTUNITY_ROWS); // NEW
+  const [isLoading, setIsLoading] = useState(true);                                        // NEW
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('due-overdue');
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-
   const userTasks = TASK_REGISTRY.filter(task => task.assignedTo === currentUser.role);
-
   const [opportunityName, setOpportunityName] = useState('');
   const [country, setCountry] = useState('');
   const [costCentre, setCostCentre] = useState('');
@@ -262,9 +264,26 @@ export default function DashboardPage() {
   const [opportunityDirector, setOpportunityDirector] = useState('');
   const [opportunityManager, setOpportunityManager] = useState('');
 
+  // NEW: Load opportunities from Supabase on mount
+  useEffect(() => {
+    let cancelled = false;
+    getAllOpportunitiesFromDB()
+      .then((data) => {
+        if (cancelled) return;
+        if (data.length > 0) {
+          setOpportunities(data);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const isFormValid =
     opportunityName && country && costCentre && organisationLocation && client && opportunityDirector && opportunityManager;
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'text-red-600';
@@ -543,7 +562,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {OPPORTUNITY_ROWS.map((row) => {
+                    {opportunities.map((row) => {
                       const raStyle = getRiskAssessmentStatusStyle(row.riskAssessmentStatus);
                       const ctStyle = getContractStatusStyle(row.contractStatus);
                       return (
