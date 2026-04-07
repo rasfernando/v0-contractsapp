@@ -26,6 +26,7 @@ import {
 import {
   OPPORTUNITY_ROWS,
   getAllOpportunitiesFromDB,
+  createOpportunityInDB,
   getRiskAssessmentStatusStyle,
   getContractStatusStyle,
   type OpportunityRow,
@@ -302,10 +303,22 @@ export default function DashboardPage() {
     setOpportunityManager('');
   };
 
-  const handleCreateRecord = () => {
-    resetForm();
-    setIsCreateSheetOpen(false);
-    router.push('/opportunity');
+  const handleCreateRecord = async () => {
+    try {
+      const newOpp = await createOpportunityInDB({
+        name: opportunityName,
+        country: country,
+        client: client,
+        director: opportunityDirector,
+        manager: opportunityManager,
+      });
+      resetForm();
+      setIsCreateSheetOpen(false);
+      router.push(`/opportunity?id=${newOpp.id}`);
+    } catch (err) {
+      console.error('Failed to create opportunity:', err);
+      alert('Failed to create opportunity. Please try again.');
+    }
   };
 
   return (
